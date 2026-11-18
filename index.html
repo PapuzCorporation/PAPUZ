@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#05080a">
+<script src="/theme-init.js?v=1"></script>
+<title>PAPUZ</title>
+<meta name="description" content="Тихий мессенджер для своих">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="application-name" content="PAPUZ">
+<meta name="apple-mobile-web-app-title" content="PAPUZ">
+<link rel="canonical" href="https://papuz.ru/">
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48 64x64 128x128 256x256">
+<link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/icon-96.png">
+<link rel="icon" type="image/png" sizes="144x144" href="/icon-144.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="PAPUZ">
+<meta property="og:title" content="PAPUZ">
+<meta property="og:description" content="Тихий мессенджер для своих">
+<meta property="og:url" content="https://papuz.ru/">
+<meta property="og:image" content="https://papuz.ru/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="PAPUZ — тихий мессенджер для своих">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PAPUZ">
+<meta name="twitter:description" content="Тихий мессенджер для своих">
+<meta name="twitter:image" content="https://papuz.ru/og-image.png">
+<link rel="stylesheet" href="/app.css?v=62">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://papuz.ru/#website",
+      "url": "https://papuz.ru/",
+      "name": "PAPUZ",
+      "description": "Тихий мессенджер для своих",
+      "inLanguage": "ru-RU",
+      "publisher": { "@id": "https://papuz.ru/#organization" }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://papuz.ru/#organization",
+      "name": "PAPUZ",
+      "url": "https://papuz.ru/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://papuz.ru/icon-512.png",
+        "width": 512,
+        "height": 512
+      }
+    },
+    {
+      "@type": "WebApplication",
+      "name": "PAPUZ",
+      "url": "https://papuz.ru/",
+      "applicationCategory": "CommunicationApplication",
+      "operatingSystem": "Any",
+      "inLanguage": "ru-RU",
+      "isAccessibleForFree": true,
+      "description": "Тихий мессенджер для своих"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<!-- фон -->
+<div class="bg" aria-hidden="true">
+  <div class="glow g1"></div>
+  <div class="glow g2"></div>
+  <div class="glow g3"></div>
+  <div class="grain"></div>
+</div>
+
+<!-- ============================== вход ============================== -->
+<section id="auth" class="auth">
+  <div class="auth-inner">
+    <div class="brand-block">
+      <h1 class="brand">PAPUZ</h1>
+      <p class="brand-sub">тихий мессенджер для своих</p>
+    </div>
+
+    <form id="auth-form" class="card auth-card" autocomplete="on">
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab is-active" data-mode="login">Вход</button>
+        <button type="button" class="tab" data-mode="register">Регистрация</button>
+        <span class="tab-ink"></span>
+      </div>
+
+      <label class="field">
+        <span class="field-label">Ник</span>
+        <input id="f-username" name="username" type="text" inputmode="text" autocomplete="username"
+               spellcheck="false" placeholder="papuz" maxlength="20">
+      </label>
+
+      <label class="field">
+        <span class="field-label">Пароль</span>
+        <input id="f-password" name="password" type="password" autocomplete="current-password"
+               placeholder="••••••••" maxlength="200">
+        <button type="button" class="eye" id="f-eye" aria-label="Показать пароль">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+        </button>
+      </label>
+
+      <label class="field field-pass2" hidden>
+        <span class="field-label">Повторите пароль</span>
+        <input id="f-password2" name="password2" type="password" autocomplete="new-password"
+               placeholder="••••••••" maxlength="200">
+      </label>
+
+      <label class="hp-field" aria-hidden="true">
+        <span>Website</span>
+        <input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off">
+      </label>
+
+      <p class="hint" id="auth-hint">Пароль от 8 символов. Он же ключ к твоей переписке — не потеряй.</p>
+      <p class="error" id="auth-error" role="alert"></p>
+
+      <button class="btn primary" id="auth-submit" type="submit">
+        <span>Войти</span>
+      </button>
+    </form>
+
+  </div>
+</section>
+
+<!-- ============================== приложение ============================== -->
+<section id="app" class="app" hidden>
+  <div class="shell">
+
+    <!-- список чатов -->
+    <aside class="side" id="side">
+      <header class="side-head">
+        <div class="wordmark">PAPUZ</div>
+        <div class="side-actions">
+          <button class="icon-btn" id="btn-group" title="Все пользователи PAPUZ" aria-label="Все пользователи PAPUZ">
+            <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="9" cy="9" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.6 19c.7-2.6 2.7-4 5.4-4s4.7 1.4 5.4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M16 6.2c1.3.2 2.3 1.3 2.3 2.8s-1 2.6-2.3 2.8M17.4 15.4c1.7.5 2.8 1.7 3.2 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-new" title="Новая группа или канал" aria-label="Новая группа или канал">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M11 5v12M5 11h12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="avatar-btn" id="btn-me" title="Профиль" aria-label="Профиль">
+            <span class="av av-sm" id="me-avatar"><span class="av-fallback">P</span></span>
+            <span class="dot-online" id="me-online"></span>
+          </button>
+        </div>
+      </header>
+
+      <div class="search-wrap">
+        <svg class="search-ico" viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="6.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input id="search" type="search" placeholder="Поиск людей" autocomplete="off" spellcheck="false">
+        <kbd class="search-kbd">⌘K</kbd>
+      </div>
+
+      <div class="results" id="results" hidden></div>
+
+      <div class="chat-list" id="chat-list">
+        <div class="empty-list" id="empty-list">
+          <div class="empty-glyph">◍</div>
+          <p class="empty-title">Пока тихо</p>
+          <p class="empty-text">Найди человека по нику — и начните первое «привет».</p>
+        </div>
+      </div>
+
+      <footer class="side-foot">
+        <span class="pulse-dot"></span>
+        <span id="conn-state">подключено</span>
+      </footer>
+
+      <!-- отдельная страница со всеми людьми -->
+      <section class="users-page" id="users-page" hidden>
+        <header class="users-head">
+          <button class="icon-btn" id="users-back" type="button" aria-label="Назад">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <h2 class="users-title">Пользователи PAPUZ</h2>
+        </header>
+        <div class="users-list" id="users-list"></div>
+      </section>
+    </aside>
+
+    <!-- чат -->
+    <main class="chat" id="chat">
+      <div class="chat-empty" id="chat-empty">
+        <div class="chat-empty-inner">
+          <div class="mark">P</div>
+          <h2 class="chat-empty-title">Выбери собеседника</h2>
+          <p class="chat-empty-text">Или создай новый разговор — ник друга знаешь лучше меня.</p>
+          <button class="btn ghost" id="btn-new-2">Найти человека</button>
+        </div>
+      </div>
+
+      <div class="chat-body" id="chat-body" hidden>
+        <header class="chat-head">
+          <button class="icon-btn back" id="btn-back" aria-label="Назад">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="av av-sm" id="peer-avatar"><span class="av-fallback">?</span></span>
+          <div class="chat-head-meta">
+            <div class="chat-head-name" id="peer-name">—</div>
+            <div class="chat-head-status" id="peer-status">не в сети</div>
+          </div>
+          <span class="lock" id="chat-lock" title="Сквозное шифрование">
+            <svg viewBox="0 0 24 24" width="15" height="15"><rect x="5" y="10.5" width="14" height="9" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.6 10.5V8a3.4 3.4 0 0 1 6.8 0v2.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+          </span>
+          <button class="icon-btn chat-more-btn" id="btn-chat-more" type="button" aria-label="Уведомления чата" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="5.5" r="1.55" fill="currentColor"/><circle cx="12" cy="12" r="1.55" fill="currentColor"/><circle cx="12" cy="18.5" r="1.55" fill="currentColor"/></svg>
+          </button>
+          <button class="icon-btn" id="btn-peer" aria-label="Профиль собеседника">
+            <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="10" r="2.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M7.5 18c1-2.2 2.6-3.2 4.5-3.2s3.5 1 4.5 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+
+          <div class="chat-more" id="chat-more" hidden>
+            <button class="chat-more-row" id="chat-notify-toggle" type="button" role="switch" aria-checked="true">
+              <span class="chat-more-ico">
+                <svg viewBox="0 0 24 24" width="18" height="18"><path d="M6.5 16.5h11l-1.3-1.9V10a4.2 4.2 0 0 0-8.4 0v4.6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 18.5a2.2 2.2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              </span>
+              <span class="chat-more-body">
+                <span class="chat-more-title" id="chat-notify-title">Уведомления включены</span>
+                <span class="chat-more-sub" id="chat-notify-sub">Присылать в Telegram, когда меня нет в сети</span>
+              </span>
+              <span class="switch" id="chat-notify-switch"><i></i></span>
+            </button>
+          </div>
+        </header>
+
+        <div class="player" id="player" hidden>
+          <button type="button" class="p-toggle" id="p-toggle" aria-label="Пауза"></button>
+          <button type="button" class="p-main" id="p-open">
+            <span class="p-title" id="p-title"></span>
+            <span class="p-track"><i id="p-fill"></i></span>
+          </button>
+          <button type="button" class="p-close" id="p-close" aria-label="Закрыть"></button>
+        </div>
+
+        <div class="messages" id="messages"></div>
+
+        <div class="typing" id="typing" hidden><span></span><span></span><span></span></div>
+
+        <form class="composer" id="composer">
+          <button type="button" class="c-btn" id="btn-attach" aria-label="Прикрепить" aria-expanded="false"></button>
+          <div class="c-field">
+            <textarea id="msg-input" rows="1" placeholder="Сообщение" maxlength="12000"></textarea>
+          </div>
+          <button class="send" type="submit" id="btn-send" aria-label="Записать голосовое" data-mode="mic"></button>
+        </form>
+
+        <div class="ch-sub" id="ch-sub" hidden>
+          <span class="ch-sub-text">Вы смотрите канал без подписки</span>
+          <button class="btn primary ch-sub-btn" id="ch-sub-btn" type="button">Подписаться</button>
+        </div>
+
+        <div class="attach-menu" id="attach-menu" hidden>
+          <button type="button" data-attach="photo"><span class="am-ico" data-icon="photo"></span>Фото</button>
+          <button type="button" data-attach="video"><span class="am-ico" data-icon="video"></span>Видео</button>
+          <button type="button" data-attach="file"><span class="am-ico" data-icon="file"></span>Файл</button>
+        </div>
+
+        <div class="uploads" id="uploads" hidden></div>
+
+        <input type="file" id="in-photo" accept="image/*" multiple hidden>
+        <input type="file" id="in-video" accept="video/*" hidden>
+        <input type="file" id="in-file" multiple hidden>
+      </div>
+    </main>
+  </div>
+
+  <div class="rec" id="rec" hidden>
+    <div class="rec-bar" id="rec-bar">
+      <button type="button" class="rb-btn rb-del" id="rec-cancel" aria-label="Отменить"></button>
+      <span class="rb-live"><i></i></span>
+      <span class="rb-time" id="rec-timer">0:00</span>
+      <span class="rb-wave" id="rec-wave"></span>
+      <button type="button" class="rb-btn rb-send" id="rec-stop" aria-label="Отправить"></button>
+    </div>
+    <div class="rec-stage" id="rec-stage">
+      <div class="rec-top">
+        <span class="rb-live"><i></i></span>
+        <span class="rb-time" id="rec-time2">0:00</span>
+      </div>
+      <div class="rec-wrap">
+        <div class="rec-round">
+          <video class="rec-video" id="rec-video" playsinline muted autoplay></video>
+          <span class="rec-vignette"></span>
+        </div>
+        <span class="rec-ring" id="rec-ring"></span>
+      </div>
+      <p class="rec-hint" id="rec-hint">Кружок · нажми, чтобы отправить</p>
+      <div class="rec-ctl" id="rec-ctl">
+        <button type="button" class="rb-btn rb-del" id="rec-cancel2" aria-label="Отменить"></button>
+        <button type="button" class="rb-btn" id="rec-flip" aria-label="Переключить камеру"></button>
+        <button type="button" class="rb-btn rb-send" id="rec-stop2" aria-label="Отправить"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="aud" id="aud" hidden>
+    <div class="aud-backdrop" id="aud-backdrop"></div>
+    <div class="aud-panel" role="dialog" aria-modal="true" aria-label="Плеер">
+      <div class="aud-grab"></div>
+      <div class="aud-head">
+        <div class="aud-cover" id="aud-cover"></div>
+        <div class="aud-info">
+          <div class="aud-title" id="aud-title"></div>
+          <div class="aud-sub" id="aud-sub"></div>
+        </div>
+        <button type="button" class="aud-more" id="aud-more" aria-label="Ещё"></button>
+      </div>
+      <div class="aud-menu" id="aud-menu" hidden>
+        <button type="button" id="aud-download">Скачать</button>
+        <button type="button" id="aud-close">Закрыть плеер</button>
+      </div>
+      <div class="aud-seek" id="aud-seek">
+        <span class="aud-bar" id="aud-bar"><i id="aud-fill"></i><b id="aud-knob"></b></span>
+        <div class="aud-times"><span id="aud-cur">0:00</span><span id="aud-dur">0:00</span></div>
+      </div>
+      <button type="button" class="aud-big" id="aud-big" aria-label="Пауза"></button>
+    </div>
+  </div>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <button type="button" class="lb-close" id="lb-close" aria-label="Закрыть">✕</button>
+    <img id="lb-img" alt="" hidden>
+    <video id="lb-video" controls playsinline hidden></video>
+  </div>
+</section>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-backdrop" data-close></div>
+  <aside class="sheet-panel set-panel" role="dialog" aria-modal="true" aria-label="Настройки">
+
+    <header class="set-head">
+      <button class="set-back" id="set-back" type="button" aria-label="Назад" hidden>
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <h2 class="set-title" id="set-title">Настройки</h2>
+      <button class="set-eye" id="set-eye" type="button" aria-label="Как видят другие" title="Как видят другие" hidden>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2.6 12S6.1 5.9 12 5.9 21.4 12 21.4 12 17.9 18.1 12 18.1 2.6 12 2.6 12z"/>
+          <circle cx="12" cy="12" r="2.7"/>
+        </svg>
+      </button>
+      <button class="sheet-close" data-close aria-label="Закрыть">✕</button>
+    </header>
+
+    <div class="set-views" id="set-views">
+
+      <!-- главная -->
+      <section class="set-view is-active" data-view="main">
+        <div class="set-scroll">
+
+          <button class="set-profile" type="button" data-open-view="profile">
+            <span class="av av-lg" id="pf-avatar"><span class="av-fallback">P</span></span>
+            <span class="set-profile-body">
+              <span class="set-profile-name" id="pf-name">—</span>
+              <span class="set-profile-nick" id="pf-nick">@—</span>
+              <span class="status-pill" id="pf-status-pill"><i></i><span id="pf-status">в сети</span></span>
+            </span>
+            <span class="set-chev">›</span>
+          </button>
+
+          <div class="set-stats">
+            <div class="stat"><b id="pf-chats">0</b><span>чатов</span></div>
+            <div class="stat"><b id="pf-msgs">0</b><span>сообщений</span></div>
+            <div class="stat"><b id="pf-days">1</b><span>день</span></div>
+          </div>
+
+          <div class="set-group">
+            <button class="set-row" type="button" data-open-view="theme">
+              <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.7-.8 1.7-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.1 0-1 .8-1.7 1.8-1.7H16a5 5 0 0 0 5-5c0-4-4-7.3-9-7.3z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="7.6" cy="11" r="1.1" fill="currentColor"/><circle cx="10" cy="7.2" r="1.1" fill="currentColor"/><circle cx="14.4" cy="7" r="1.1" fill="currentColor"/><circle cx="17.2" cy="10" r="1.1" fill="currentColor"/></svg></span>
+              <span class="set-row-body">
+                <span class="set-row-title">Оформление</span>
+                <span class="set-row-sub" id="set-theme-sub">Тёмная</span>
+              </span>
+              <span class="set-chev">›</span>
+            </button>
+
+            <button class="set-row" type="button" data-open-view="notifications">
+              <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><path d="M6.5 16.5h11l-1.3-1.9V10a4.2 4.2 0 0 0-8.4 0v4.6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 18.5a2.2 2.2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+              <span class="set-row-body">
+                <span class="set-row-title">Уведомления</span>
+                <span class="set-row-sub" id="set-notify-sub">Telegram</span>
+              </span>
+              <span class="set-chev">›</span>
+            </button>
+
+            <button class="set-row" type="button" data-open-view="storage">
+              <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><ellipse cx="12" cy="6" rx="7" ry="2.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 6v6c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12v6c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-6" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>
+              <span class="set-row-body">
+                <span class="set-row-title">Хранилище</span>
+                <span class="set-row-sub" id="set-storage-sub">Считаю…</span>
+              </span>
+              <span class="set-chev">›</span>
+            </button>
+
+            <button class="set-row" type="button" data-open-view="crypto">
+              <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8.4 10.5V8a3.6 3.6 0 0 1 7.2 0v2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="15" r="1.1" fill="currentColor"/></svg></span>
+              <span class="set-row-body">
+                <span class="set-row-title">Сквозное шифрование</span>
+                <span class="set-row-sub">Личные чаты</span>
+              </span>
+              <span class="set-chev">›</span>
+            </button>
+          </div>
+
+          <div class="set-group">
+            <button class="set-row" type="button" data-open-view="password">
+              <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><circle cx="8.5" cy="12" r="3.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12.1 12H20M17 12v2.4M14.4 12v1.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+              <span class="set-row-body">
+                <span class="set-row-title">Сменить пароль</span>
+                <span class="set-row-sub">Обновит ключ шифрования</span>
+              </span>
+              <span class="set-chev">›</span>
+            </button>
+
+            <button class="set-row" type="button" data-open-view="devices">
+              <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><rect x="3.5" y="5" width="12" height="9" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 17.5h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="16.5" y="9.5" width="4" height="9.5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span>
+              <span class="set-row-body">
+                <span class="set-row-title">Устройства</span>
+                <span class="set-row-sub" id="set-devices-sub">Загружаю…</span>
+              </span>
+              <span class="set-chev">›</span>
+            </button>
+          </div>
+
+          <button class="btn danger-ghost set-logout" id="btn-logout" type="button">Выйти из аккаунта</button>
+          <p class="set-foot">PAPUZ · тихий мессенджер для своих</p>
+        </div>
+      </section>
+
+      <!-- профиль -->
+      <section class="set-view" data-view="profile">
+        <div class="set-scroll">
+          <div class="av-wrap set-av">
+            <span class="av av-xl" id="pf-avatar-edit"><span class="av-fallback">P</span></span>
+            <label class="av-edit" for="av-file" role="button" aria-label="Сменить аватар">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 8.5h3l1.6-2h6.8L17 8.5h3v10H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+            </label>
+            <input type="file" id="av-file" accept="image/*" hidden>
+          </div>
+
+          <form class="pf-form" id="pf-form">
+            <label class="field">
+              <span class="field-label">Имя</span>
+              <input id="pf-name-input" maxlength="40" placeholder="Имя">
+            </label>
+            <label class="field">
+              <span class="field-label">О себе</span>
+              <input id="pf-bio-input" maxlength="200" placeholder="Пара слов">
+            </label>
+            <button class="btn primary" type="submit">Сохранить</button>
+          </form>
+          <p class="pf-p small">Имя и описание видят все, кто открывает твой профиль.</p>
+        </div>
+      </section>
+
+      <!-- уведомления -->
+      <section class="set-view" data-view="notifications">
+        <div class="set-scroll">
+          <button class="notify-card" id="btn-notify-link" type="button" aria-label="Привязать Telegram">
+            <span class="notify-card-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20"><path d="M20.5 4.2 3.8 10.6l5.1 2.1 2 5.3 3.1-3.5 4.2 2.4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="m8.9 12.7 8-6.1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </span>
+            <span class="notify-card-body">
+              <span class="notify-card-title">Telegram</span>
+              <span class="notify-card-sub" id="notify-link-status">Не привязан</span>
+            </span>
+            <span class="switch" id="notify-link-switch" aria-hidden="true"><i></i></span>
+          </button>
+
+          <div id="notify-body" hidden>
+            <div class="set-group">
+              <button class="set-row" type="button" id="notify-quiet-row" role="switch" aria-checked="false">
+                <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><path d="M6.5 16.5h11l-1.3-1.9V10a4.2 4.2 0 0 0-8.4 0v4.6z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 18.5a2.2 2.2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="m4 4 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                <span class="set-row-body">
+                  <span class="set-row-title">Беззвучный режим</span>
+                </span>
+                <span class="switch" id="notify-quiet-switch"><i></i></span>
+              </button>
+            </div>
+
+            <p class="set-lead" id="notify-categories-title" style="margin:16px 2px 8px">Что присылать</p>
+            <div class="set-group">
+              <button class="set-row" type="button" id="notify-dm-row" role="switch" aria-checked="true">
+                <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><path d="M4.5 6.5h15v9.6h-8.7L6.6 19v-2.9H4.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+                <span class="set-row-body">
+                  <span class="set-row-title">Личные сообщения</span>
+                </span>
+                <span class="switch on" id="notify-dm-switch"><i></i></span>
+              </button>
+
+              <button class="set-row" type="button" id="notify-groups-row" role="switch" aria-checked="true">
+                <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><circle cx="9" cy="9.4" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 18.2c.6-2.6 2.8-4 5.5-4s4.9 1.4 5.5 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15.6 7.1a2.7 2.7 0 0 1 0 5.3M17.4 14.7c1.6.5 2.7 1.7 3.1 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                <span class="set-row-body">
+                  <span class="set-row-title">Группы</span>
+                </span>
+                <span class="switch on" id="notify-groups-switch"><i></i></span>
+              </button>
+
+              <button class="set-row" type="button" id="notify-channels-row" role="switch" aria-checked="true">
+                <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><path d="M10 6.5 19 4v16l-9-2.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 6.5H7a3 3 0 0 0 0 11h3z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.6 9.2v5.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                <span class="set-row-body">
+                  <span class="set-row-title">Каналы</span>
+                </span>
+                <span class="switch on" id="notify-channels-switch"><i></i></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- оформление -->
+      <section class="set-view" data-view="theme">
+        <div class="set-scroll">
+          <p class="set-lead">Выбери, как выглядит PAPUZ. Тема запоминается на этом устройстве.</p>
+          <div class="themes" id="themes" role="group" aria-label="Тема оформления">
+            <button class="theme-card" type="button" data-theme-set="dark">
+              <span class="theme-prev"><i></i><i></i></span>
+              <span class="theme-name">Тёмная</span>
+            </button>
+            <button class="theme-card" type="button" data-theme-set="black">
+              <span class="theme-prev"><i></i><i></i></span>
+              <span class="theme-name">Глубокий чёрный</span>
+            </button>
+            <button class="theme-card" type="button" data-theme-set="light">
+              <span class="theme-prev"><i></i><i></i></span>
+              <span class="theme-name">Белая</span>
+            </button>
+            <button class="theme-card" type="button" data-theme-set="copper">
+              <span class="theme-prev"><i></i><i></i></span>
+              <span class="theme-name">Медь</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- хранилище -->
+      <section class="set-view" data-view="storage">
+        <div class="set-scroll">
+          <p class="pf-p" id="pf-storage-text">Считаю…</p>
+          <div class="stor-bar"><i id="pf-storage-fill"></i></div>
+          <p class="pf-p small">5 ГБ на человека: фото, голосовые, кружки, видео и файлы. Место освобождается, когда удаляешь старые вложения в чатах.</p>
+        </div>
+      </section>
+
+      <!-- шифрование -->
+      <section class="set-view" data-view="crypto">
+        <div class="set-scroll">
+          <div class="set-badge">E2E</div>
+          <p class="pf-p">Личные чаты шифруются на твоём устройстве. Сервер видит только набор символов — ни текста, ни ключа.</p>
+          <div class="pf-key" id="pf-key">ключ: —</div>
+          <p class="pf-p small">Ключ привязан к паролю. Если сменить пароль, ключ перевернётся, а остальные устройства выйдут.</p>
+        </div>
+      </section>
+
+      <!-- пароль -->
+      <section class="set-view" data-view="password">
+        <div class="set-scroll">
+          <form class="pf-form" id="pass-form">
+            <label class="field">
+              <span class="field-label">Текущий пароль</span>
+              <input id="pass-old" type="password" autocomplete="current-password" placeholder="••••••••">
+            </label>
+            <label class="field">
+              <span class="field-label">Новый пароль</span>
+              <input id="pass-new" type="password" autocomplete="new-password" placeholder="от 8 символов">
+            </label>
+            <label class="field">
+              <span class="field-label">Ещё раз</span>
+              <input id="pass-new2" type="password" autocomplete="new-password" placeholder="повтори">
+            </label>
+            <button class="btn primary" type="submit" id="pass-submit">Обновить пароль</button>
+          </form>
+          <p class="pf-p small">История не пропадёт: ключ переворачивается новым паролем локально. Остальные устройства выйдут из аккаунта.</p>
+        </div>
+      </section>
+
+      <!-- устройства -->
+      <section class="set-view" data-view="devices">
+        <div class="set-scroll">
+          <div class="devices" id="devices"><div class="pf-p small">Загружаю…</div></div>
+          <button class="btn ghost small" id="btn-revoke-all">Выйти на всех, кроме этого</button>
+          <p class="pf-p small">Если видишь незнакомое устройство — выйди на нём и смени пароль.</p>
+        </div>
+      </section>
+
+    </div>
+  </aside>
+</div>
+
+<!-- ============================ новый чат ============================ -->
+<div class="sheet" id="sheet-new" hidden>
+  <div class="sheet-backdrop" data-close-new></div>
+  <aside class="sheet-panel" role="dialog" aria-modal="true" aria-label="Новый чат">
+    <button class="sheet-close" data-close-new aria-label="Закрыть">✕</button>
+    <div class="gc">
+      <h2 class="gc-title">Новый чат</h2>
+      <div class="seg" id="gc-type">
+        <button type="button" data-type="group" class="is-active">Группа</button>
+        <button type="button" data-type="channel">Канал</button>
+      </div>
+      <label class="field">
+        <span class="field-label">Название</span>
+        <input id="gc-name" maxlength="60" placeholder="Например, «Свои»" autocomplete="off">
+      </label>
+      <label class="field" id="gc-username-field" hidden>
+        <span class="field-label">Юзернейм канала</span>
+        <input id="gc-username" maxlength="21" placeholder="например, papuz" autocomplete="off"
+               autocapitalize="none" spellcheck="false">
+      </label>
+      <label class="field">
+        <span class="field-label">Добавить людей</span>
+        <input id="gc-search" placeholder="Ник или имя" autocomplete="off">
+      </label>
+      <div class="gc-results" id="gc-results" hidden></div>
+      <div class="gc-picked" id="gc-picked"></div>
+      <button class="btn primary" id="gc-create">Создать</button>
+      <p class="pf-p small" id="gc-hint">В группе пишут все, в канале — только админы.</p>
+    </div>
+  </aside>
+</div>
+
+<!-- =========================== чат: состав =========================== -->
+<div class="sheet" id="sheet-group" hidden>
+  <div class="sheet-backdrop" data-close-group></div>
+  <aside class="sheet-panel" role="dialog" aria-modal="true" aria-label="Чат">
+    <div class="cover"></div>
+    <button class="sheet-close" data-close-group aria-label="Закрыть">✕</button>
+    <div class="profile">
+      <div class="av-wrap">
+        <span class="av av-xl grp" id="g-avatar"><span class="av-fallback">#</span></span>
+      </div>
+      <h2 class="pf-name" id="g-name">—</h2>
+      <div class="pf-nick" id="g-sub">—</div>
+      <p class="pf-p" id="g-about" hidden></p>
+
+      <form class="pf-form" id="g-form" hidden>
+        <label class="field">
+          <span class="field-label">Название</span>
+          <input id="g-title-input" maxlength="60">
+        </label>
+        <label class="field" id="g-username-field" hidden>
+          <span class="field-label">Юзернейм канала</span>
+          <input id="g-username-input" maxlength="21" placeholder="например, papuz" autocomplete="off"
+                 autocapitalize="none" spellcheck="false">
+        </label>
+        <label class="field">
+          <span class="field-label">Описание</span>
+          <input id="g-about-input" maxlength="200" placeholder="Пара слов о чате">
+        </label>
+        <button class="btn primary" type="submit">Сохранить</button>
+      </form>
+
+      <section class="pf-section" id="g-members-section">
+        <h3 class="pf-h" id="g-members-h">Участники</h3>
+        <div class="members" id="g-members"></div>
+        <div class="gc-inline" id="g-add-wrap" hidden>
+          <input id="g-add-search" placeholder="Ник или имя" autocomplete="off">
+          <div class="gc-results" id="g-add-results" hidden></div>
+        </div>
+        <button class="btn ghost small" id="g-add-btn" hidden>Добавить людей</button>
+      </section>
+
+      <div class="g-danger" id="g-danger" hidden>
+        <button class="btn danger-ghost" id="g-delete">Удалить группу</button>
+        <div class="g-confirm" id="g-confirm" hidden>
+          <p id="g-confirm-text">Удалить группу навсегда? Все сообщения и файлы исчезнут у участников.</p>
+          <div class="g-confirm-actions">
+            <button class="btn danger-ghost" id="g-delete-yes">Удалить</button>
+            <button class="btn ghost" id="g-delete-no">Отмена</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn danger-ghost" id="g-leave">Покинуть чат</button>
+    </div>
+  </aside>
+</div>
+
+<!-- ========================= профиль собеседника ========================= -->
+<div class="sheet" id="sheet-peer" hidden>
+  <div class="sheet-backdrop" data-close-peer></div>
+  <aside class="sheet-panel" role="dialog" aria-modal="true" aria-label="Профиль собеседника">
+    <div class="cover"></div>
+    <button class="sheet-close" data-close-peer aria-label="Закрыть">✕</button>
+    <div class="profile">
+      <div class="av-wrap">
+        <span class="av av-xl" id="p-avatar"><span class="av-fallback">?</span></span>
+      </div>
+      <h2 class="pf-name" id="p-name">—</h2>
+      <div class="pf-nick" id="p-nick">@—</div>
+      <p class="pf-p" id="p-bio"></p>
+      <div class="pf-row">
+        <span class="status-pill"><i></i><span id="p-status">—</span></span>
+        <button class="btn primary pf-chat-btn" id="p-chat" type="button">Написать</button>
+      </div>
+      <div class="pf-section">
+        <h3 class="pf-h">Сквозное шифрование</h3>
+        <div class="pf-key" id="p-enc">ключ: —</div>
+        <p class="pf-p small">Такой же отпечаток должен быть у собеседника — сверьте вживую.</p>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/twemoji.min.js"></script>
+<script src="/app.js?v=78" type="module"></script>
+</body>
+</html>
