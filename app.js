@@ -3323,8 +3323,32 @@ function setSettingsView(view = 'main') {
     renderNotifications();
     loadNotifications();
   }
+  if (view === 'crypto') loadCryptoMeta();
   const scroller = views.querySelector(`.set-view[data-view="${view}"] .set-scroll`);
   if (scroller) scroller.scrollTop = 0;
+}
+
+/* хэш клиента и ссылка на коммит — чтобы можно было сверить с GitHub */
+async function loadCryptoMeta() {
+  const el = $('#crypto-meta');
+  if (!el) return;
+  try {
+    const res = await fetch('/client.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('no meta');
+    const m = await res.json();
+    if (!m?.sha256 || !m?.commit) throw new Error('bad meta');
+    const version = m.version ? ` ${m.version}` : '';
+    el.textContent = `app.js${version} · sha256 ${String(m.sha256).slice(0, 12)}… · `;
+    const link = document.createElement('a');
+    link.href = m.commitUrl || `https://github.com/PapuzCorporation/PAPUZ/commit/${m.commit}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = `коммит ${String(m.commit).slice(0, 7)}`;
+    el.append(link);
+    el.hidden = false;
+  } catch {
+    el.hidden = true;
+  }
 }
 
 function fillProfile() {

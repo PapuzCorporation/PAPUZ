@@ -864,6 +864,15 @@ button{background:none;border:0;cursor:pointer}
 .set-row.is-off .set-ico{opacity:.6}
 #notify-categories-title{transition:opacity .2s,color .2s}
 #notify-categories-title.is-disabled{opacity:.45}
+.crypto-verify{margin-top:16px}
+.crypto-verify a{color:var(--mint);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.crypto-verify a:hover{color:var(--ink)}
+.crypto-meta{
+  margin:10px 0 0;font-size:11px;line-height:1.5;color:var(--muted-2);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere;
+}
+.crypto-meta a{color:var(--mint);text-decoration:none}
+.crypto-meta a:hover{text-decoration:underline}
 .set-badge{
   display:inline-grid;place-items:center;min-width:46px;height:26px;padding:0 11px;margin:0 0 12px;
   border-radius:9px;font-size:11px;font-weight:600;letter-spacing:.12em;
