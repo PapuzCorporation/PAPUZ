@@ -3998,6 +3998,26 @@ $('#btn-logout').addEventListener('click', async () => {
 
 /* ----------------------------------------------------------- websocket */
 
+/* активность: серверу нужно знать, что человек реально пользуется сайтом.
+   Иначе фоновая вкладка считается «в сети» и Telegram-уведомления не приходят.
+   Сам статус ожидания больше нигде не показываем. */
+let lastActivityAt = 0;
+function reportActivity(force = false) {
+  if (!state.me) return;
+  const ws = state.ws;
+  if (!ws || ws.readyState !== 1) return;
+  const t = Date.now();
+  if (!force && t - lastActivityAt < 5000) return;
+  lastActivityAt = t;
+  try { ws.send(JSON.stringify({ type: 'activity' })); } catch { /* сокет уже закрылся */ }
+}
+for (const ev of ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'touchmove']) {
+  window.addEventListener(ev, () => reportActivity(), { passive: true });
+}
+document.addEventListener('scroll', () => reportActivity(), { capture: true, passive: true });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) reportActivity(true); });
+window.addEventListener('focus', () => reportActivity(true));
+
 function connectWs() {
   if (state.ws && (state.ws.readyState === 0 || state.ws.readyState === 1)) return;
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';
