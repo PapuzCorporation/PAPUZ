@@ -443,8 +443,8 @@ button{background:none;border:0;cursor:pointer}
 .chat-item{
   display:flex;align-items:center;gap:11px;width:100%;min-width:0;padding:10px;border-radius:16px;text-align:left;
   transition:background .18s,transform .18s var(--ease);position:relative;
-  animation:itemIn .5s var(--ease) both;animation-delay:calc(var(--i,0) * 40ms)
 }
+.chat-item.is-new{animation:itemIn .5s var(--ease) both;animation-delay:calc(var(--i,0) * 40ms)}
 @keyframes itemIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .chat-item:hover{background:var(--panel-2)}
 .chat-item.is-active{background:var(--active-grad);

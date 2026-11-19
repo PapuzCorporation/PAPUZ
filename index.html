@@ -34,7 +34,7 @@
 <meta name="twitter:title" content="PAPUZ">
 <meta name="twitter:description" content="Тихий мессенджер для своих">
 <meta name="twitter:image" content="https://papuz.ru/og-image.png">
-<link rel="stylesheet" href="/app.css?v=64">
+<link rel="stylesheet" href="/app.css?v=65">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -84,8 +84,18 @@
   <div class="grain"></div>
 </div>
 
+<!-- ============================== загрузка ============================== -->
+<section id="boot" class="auth boot">
+  <div class="auth-inner">
+    <div class="brand-block">
+      <h1 class="brand">PAPUZ</h1>
+      <p class="brand-sub">загружаю…</p>
+    </div>
+  </div>
+</section>
+
 <!-- ============================== вход ============================== -->
-<section id="auth" class="auth">
+<section id="auth" class="auth" hidden>
   <div class="auth-inner">
     <div class="brand-block">
       <h1 class="brand">PAPUZ</h1>
@@ -720,6 +730,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/twemoji.min.js"></script>
-<script src="/app.js?v=79" type="module"></script>
+<script src="/app.js?v=80" type="module"></script>
 </body>
 </html>
