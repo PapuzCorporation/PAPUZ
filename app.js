@@ -218,16 +218,45 @@ function presenceBadge(peer) {
 const THEME_KEY = 'papuz-theme';
 const THEME_COLORS = {
   dark: '#05080a', black: '#000000', light: '#f2f6f0', copper: '#0e0906',
-  neon: '#07050d', ocean: '#040b12', sakura: '#fbf4f7', simple: '#101010',
+  neon: '#07050d', ocean: '#040b12', sakura: '#fbf4f7', winter: '#08121b',
+  simple: '#101010',
 };
 const THEME_NAMES = {
   dark: 'Тёмная', black: 'Глубокий чёрный', light: 'Белая', copper: 'Медь',
-  neon: 'Неон', ocean: 'Океан', sakura: 'Сакура', simple: 'Простая',
+  neon: 'Неон', ocean: 'Океан', sakura: 'Сакура', winter: 'Зимняя',
+  simple: 'Простая',
 };
 const THEMES = Object.keys(THEME_COLORS);
 
+let snowBuilt = false;
+function ensureSnow() {
+  if (snowBuilt) return;
+  const layer = document.querySelector('.snow');
+  if (!layer) return;
+  for (let i = 0; i < 32; i++) {
+    const near = Math.random() < 0.2;
+    const flake = document.createElement('i');
+    const dot = document.createElement('b');
+    const size = near ? (3.4 + Math.random() * 2.2) : (1.2 + Math.random() * 2.2);
+    flake.style.left = (Math.random() * 100).toFixed(2) + '%';
+    flake.style.width = size.toFixed(2) + 'px';
+    flake.style.height = size.toFixed(2) + 'px';
+    flake.style.opacity = (near ? 0.2 + Math.random() * 0.2 : 0.3 + Math.random() * 0.45).toFixed(2);
+    flake.style.animationDuration = (near ? 8 + Math.random() * 6 : 12 + Math.random() * 14).toFixed(1) + 's';
+    flake.style.animationDelay = (-Math.random() * 24).toFixed(1) + 's';
+    flake.style.setProperty('--drift', (Math.random() * 90 - 45).toFixed(0) + 'px');
+    if (near) flake.style.filter = 'blur(.5px)';
+    dot.style.animationDuration = (2.6 + Math.random() * 3.8).toFixed(1) + 's';
+    dot.style.animationDelay = (-Math.random() * 6).toFixed(1) + 's';
+    flake.append(dot);
+    layer.append(flake);
+  }
+  snowBuilt = true;
+}
+
 function paintTheme(theme) {
   document.documentElement.dataset.theme = theme;
+  if (theme === 'winter') ensureSnow();
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', THEME_COLORS[theme] || THEME_COLORS.dark);
   for (const btn of $$('[data-theme-set]')) {

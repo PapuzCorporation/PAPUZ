@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" content="#05080a">
-<script src="/theme-init.js?v=5"></script>
+<script src="/theme-init.js?v=6"></script>
 <title>PAPUZ</title>
 <meta name="description" content="Тихий мессенджер для своих">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -34,7 +34,7 @@
 <meta name="twitter:title" content="PAPUZ">
 <meta name="twitter:description" content="Тихий мессенджер для своих">
 <meta name="twitter:image" content="https://papuz.ru/og-image.png">
-<link rel="stylesheet" href="/app.css?v=77">
+<link rel="stylesheet" href="/app.css?v=80">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -83,6 +83,9 @@
   <div class="glow g3"></div>
   <div class="grain"></div>
 </div>
+
+<!-- снег для зимней темы -->
+<div class="snow" aria-hidden="true"></div>
 
 <!-- ============================== загрузка ============================== -->
 <section id="boot" class="auth boot">
@@ -559,6 +562,10 @@
               <span class="theme-prev"><i></i><i></i></span>
               <span class="theme-name">Сакура</span>
             </button>
+            <button class="theme-card" type="button" data-theme-set="winter">
+              <span class="theme-prev"><i></i><i></i></span>
+              <span class="theme-name">Зимняя</span>
+            </button>
             <button class="theme-card" type="button" data-theme-set="simple">
               <span class="theme-prev"><i></i><i></i></span>
               <span class="theme-name">Простая</span>
@@ -740,6 +747,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/twemoji.min.js"></script>
-<script src="/app.js?v=90" type="module"></script>
+<script src="/app.js?v=93" type="module"></script>
 </body>
 </html>
