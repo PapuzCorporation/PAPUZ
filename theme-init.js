@@ -7,7 +7,7 @@
     document.documentElement.dataset.theme = t;
     var c = {
       dark: '#05080a', black: '#000000', light: '#f2f6f0', copper: '#0e0906',
-      neon: '#07050d', ocean: '#040b12', sakura: '#fbf4f7', simple: '#171614'
+      neon: '#07050d', ocean: '#040b12', sakura: '#fbf4f7', simple: '#101010'
     };
     var m = document.querySelector('meta[name="theme-color"]');
     if (m) m.setAttribute('content', c[t]);

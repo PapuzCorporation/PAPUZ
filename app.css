@@ -892,7 +892,7 @@ button{background:none;border:0;cursor:pointer}
 .theme-name{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px;
   font-size:12px;line-height:1.25;color:var(--ink);min-height:15px}
 .theme-card.is-active .theme-name::after{
-  content:"";width:15px;height:15px;flex:none;background-color:var(--mint);
+  content:"";width:15px;height:15px;flex:none;background-color:var(--lime);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.2 4.3L19 6.8' fill='none' stroke='%23000' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.2 4.3L19 6.8' fill='none' stroke='%23000' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
   animation:themeCheck .18s var(--ease) both
@@ -931,9 +931,9 @@ button{background:none;border:0;cursor:pointer}
 }
 
 .theme-card[data-theme-set="simple"]{
-  --p-bg:#1d1c1a;
+  --p-bg:#181818;
   --p-line:rgba(255,255,255,.10);
-  --p-them:rgba(255,255,255,.14);--p-mine:#3d3a34;--p-dot:#d8d5cf
+  --p-them:rgba(255,255,255,.16);--p-mine:#343434;--p-dot:#f0f0f0
 }
 
 /* ------------------------------------------------------- группы */
@@ -2480,197 +2480,197 @@ html[data-theme="sakura"]{
   --toast-bg:rgba(255,255,255,.98);
 }
 
-/* --- простая: тихий графит без градиентов --- */
+/* --- простая: строгий нейтральный графит, без градиентов --- */
 html[data-theme="simple"]{
 
-  --bg:#171614;
-  --ink:#e9e6e1;
-  --muted:#a5a19b;
-  --muted-2:#7c7974;
-  --line:rgba(255,255,255,.08);
-  --line-strong:rgba(255,255,255,.15);
+  --bg:#101010;
+  --ink:#ededed;
+  --muted:#a3a3a3;
+  --muted-2:#767676;
+  --line:rgba(255,255,255,.09);
+  --line-strong:rgba(255,255,255,.17);
   --panel:rgba(255,255,255,.04);
   --panel-2:rgba(255,255,255,.07);
-  --lime:#e3e0da;
-  --mint:#9db3a6;
-  --danger:#d08a86;
+  --lime:#f0f0f0;
+  --mint:#e0e0e0;
+  --danger:#d88a8a;
   --r:18px;
   --ease:cubic-bezier(.22,1,.36,1);
-  --shadow:0 24px 60px -30px rgba(0,0,0,.7);
-  --selection:rgba(255,255,255,.16);
-  --on-accent:#171614;
+  --shadow:0 24px 60px -30px rgba(0,0,0,.8);
+  --selection:rgba(255,255,255,.18);
+  --on-accent:#101010;
 
   /* фон */
-  --bg-grad:#171614;
+  --bg-grad:#101010;
   --glow-1:none;
   --glow-2:none;
   --glow-3:none;
   --glow-opacity:0;
   --grain-opacity:0;
-  --brand-grad:#e9e6e1;
-  --wordmark-grad:#e9e6e1;
+  --brand-grad:#f0f0f0;
+  --wordmark-grad:#f0f0f0;
 
   /* карточки и поля */
-  --card-bg:#22211f;
-  --card-inset:inset 0 1px 0 rgba(255,255,255,.04);
+  --card-bg:#1e1e1e;
+  --card-inset:inset 0 1px 0 rgba(255,255,255,.05);
   --tabs-bg:rgba(255,255,255,.06);
-  --field-bg:rgba(255,255,255,.05);
-  --field-bg-focus:#262522;
-  --field-focus-line:rgba(255,255,255,.22);
-  --field-ring:0 0 0 4px rgba(255,255,255,.06);
-  --search-bg:rgba(255,255,255,.05);
-  --search-bg-focus:#262522;
-  --search-focus-line:rgba(255,255,255,.18);
-  --inline-focus-line:rgba(255,255,255,.16);
-  --input-focus-line:rgba(255,255,255,.14);
+  --field-bg:rgba(255,255,255,.055);
+  --field-bg-focus:#262626;
+  --field-focus-line:rgba(255,255,255,.24);
+  --field-ring:0 0 0 4px rgba(255,255,255,.07);
+  --search-bg:rgba(255,255,255,.055);
+  --search-bg-focus:#262626;
+  --search-focus-line:rgba(255,255,255,.20);
+  --inline-focus-line:rgba(255,255,255,.17);
+  --input-focus-line:rgba(255,255,255,.15);
   --ghost-bg:rgba(255,255,255,.05);
 
   /* акцент */
-  --accent-grad:#d8d5cf;
-  --accent-grad-2:#e5e2dc;
-  --accent-grad-3:#d8d5cf;
-  --accent-grad-v:#cfccc6;
+  --accent-grad:#ededed;
+  --accent-grad-2:#f7f7f7;
+  --accent-grad-3:#ededed;
+  --accent-grad-v:#e2e2e2;
   --accent-soft-grad:rgba(255,255,255,.08);
   --accent-soft:rgba(255,255,255,.07);
   --accent-soft-2:rgba(255,255,255,.06);
-  --accent-soft-line:rgba(255,255,255,.12);
-  --accent-soft-line-2:rgba(255,255,255,.14);
-  --accent-soft-line-3:rgba(255,255,255,.16);
+  --accent-soft-line:rgba(255,255,255,.13);
+  --accent-soft-line-2:rgba(255,255,255,.15);
+  --accent-soft-line-3:rgba(255,255,255,.17);
   --accent-soft-3:rgba(255,255,255,.06);
-  --accent-line:rgba(255,255,255,.20);
-  --accent-line-soft:rgba(255,255,255,.16);
-  --accent-line-soft-2:rgba(255,255,255,.15);
-  --accent-glow:0 14px 30px -18px rgba(0,0,0,.5);
-  --accent-glow-sm:0 10px 22px -14px rgba(0,0,0,.55);
-  --accent-glow-xs:0 8px 16px -12px rgba(0,0,0,.5);
-  --accent-glow-lg:0 14px 30px -16px rgba(0,0,0,.55);
+  --accent-line:rgba(255,255,255,.22);
+  --accent-line-soft:rgba(255,255,255,.17);
+  --accent-line-soft-2:rgba(255,255,255,.16);
+  --accent-glow:0 14px 30px -18px rgba(0,0,0,.55);
+  --accent-glow-sm:0 10px 22px -14px rgba(0,0,0,.6);
+  --accent-glow-xs:0 8px 16px -12px rgba(0,0,0,.55);
+  --accent-glow-lg:0 14px 30px -16px rgba(0,0,0,.6);
   --glow-mint:none;
 
   /* опасное */
-  --danger-ghost-bg:rgba(208,138,134,.06);
-  --danger-ghost-line:rgba(208,138,134,.20);
-  --danger-ghost-ink:#d9a3a0;
-  --danger-soft:rgba(208,138,134,.10);
-  --danger-soft-2:rgba(208,138,134,.14);
+  --danger-ghost-bg:rgba(216,138,138,.06);
+  --danger-ghost-line:rgba(216,138,138,.20);
+  --danger-ghost-ink:#e0a5a5;
+  --danger-soft:rgba(216,138,138,.10);
+  --danger-soft-2:rgba(216,138,138,.14);
 
   /* каркас */
-  --shell-grad:#1d1c1a;
+  --shell-grad:#181818;
   --shell-inset:inset 0 1px 0 rgba(255,255,255,.05);
-  --shell-shadow:0 40px 80px -50px rgba(0,0,0,.8);
-  --side-grad:#1d1c1a;
-  --chat-grad:#1a1917;
-  --chat-mobile-bg:#1a1917;
-  --head-grad:rgba(26,25,23,.92);
+  --shell-shadow:0 40px 80px -50px rgba(0,0,0,.85);
+  --side-grad:#181818;
+  --chat-grad:#141414;
+  --chat-mobile-bg:#141414;
+  --head-grad:rgba(20,20,20,.92);
 
   /* аватары и список */
-  --avatar-grad:#2b2a27;
-  --avatar-line:rgba(255,255,255,.12);
-  --avatar-ink:#e6e3de;
-  --avatar-ring:0 0 0 6px #1d1c1a,0 0 0 7px rgba(255,255,255,.12),0 16px 40px -22px rgba(0,0,0,.7);
-  --online-ring:#1d1c1a;
-  --results-bg:#242320;
+  --avatar-grad:#282828;
+  --avatar-line:rgba(255,255,255,.13);
+  --avatar-ink:#ededed;
+  --avatar-ring:0 0 0 6px #181818,0 0 0 7px rgba(255,255,255,.13),0 16px 40px -22px rgba(0,0,0,.75);
+  --online-ring:#181818;
+  --results-bg:#212121;
   --scroll-thumb:rgba(255,255,255,.18);
-  --active-grad:rgba(255,255,255,.055);
-  --active-line:rgba(255,255,255,.14);
-  --pulse-off:#d08a86;
+  --active-grad:rgba(255,255,255,.06);
+  --active-line:rgba(255,255,255,.15);
+  --pulse-off:#d88a8a;
   --pulse-off-glow:none;
   --presence-glow:none;
-  --idle-bg:#b99a5f;
-  --idle-ink:#1c1608;
-  --idle-text:#c3a76f;
-  --idle-soft:rgba(185,154,95,.12);
-  --idle-line:rgba(185,154,95,.22);
-  --idle-glow:rgba(185,154,95,.18);
+  --idle-bg:#9a9a9a;
+  --idle-ink:#141414;
+  --idle-text:#b0b0b0;
+  --idle-soft:rgba(255,255,255,.08);
+  --idle-line:rgba(255,255,255,.14);
+  --idle-glow:transparent;
 
   /* чат */
-  --mark-grad:rgba(255,255,255,.06);
-  --mark-line:rgba(255,255,255,.14);
-  --mark-ink:#e6e3de;
-  --mark-shadow:0 18px 40px -24px rgba(0,0,0,.6);
-  --player-bg:#232220;
-  --player-line:rgba(255,255,255,.12);
-  --player-shadow:0 14px 30px -26px rgba(0,0,0,.75);
-  --player-title:#eae7e2;
-  --player-track:rgba(255,255,255,.14);
+  --mark-grad:rgba(255,255,255,.07);
+  --mark-line:rgba(255,255,255,.15);
+  --mark-ink:#ededed;
+  --mark-shadow:0 18px 40px -24px rgba(0,0,0,.65);
+  --player-bg:#222222;
+  --player-line:rgba(255,255,255,.13);
+  --player-shadow:0 14px 30px -26px rgba(0,0,0,.8);
+  --player-title:#f0f0f0;
+  --player-track:rgba(255,255,255,.15);
   --player-close-bg:rgba(255,255,255,.07);
   --glass-hover:rgba(255,255,255,.07);
-  --them-bg:#232220;
-  --them-ink:#e8e5e0;
+  --them-bg:#202020;
+  --them-ink:#ededed;
   --them-line:rgba(255,255,255,.09);
-  --them-shadow:0 8px 20px -16px rgba(0,0,0,.6);
-  --mine-bg:#302e2a;
-  --mine-ink:#f0ede8;
-  --mine-line:rgba(255,255,255,.10);
-  --mine-shadow:0 10px 22px -18px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);
-  --mine-meta:#a8a49d;
-  --mine-ticks:#c8c5be;
+  --them-shadow:0 8px 20px -16px rgba(0,0,0,.65);
+  --mine-bg:#2c2c2c;
+  --mine-ink:#f5f5f5;
+  --mine-line:rgba(255,255,255,.11);
+  --mine-shadow:0 10px 22px -18px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.06);
+  --mine-meta:#a8a8a8;
+  --mine-ticks:#d6d6d6;
   --day-bg:rgba(255,255,255,.06);
-  --c-btn-ink:#c9c6c0;
+  --c-btn-ink:#cccccc;
   --c-btn-bg:rgba(255,255,255,.06);
   --c-btn-line:rgba(255,255,255,.12);
   --c-btn-bg-active:rgba(255,255,255,.10);
   --input-bg:rgba(255,255,255,.06);
-  --input-bg-focus:#262522;
-  --send-ink:#171614;
-  --send-fg:#d8d5cf;
-  --btn-ink:#171614;
-  --send-grad:#232220;
-  --send-grad-press:#2c2a27;
-  --send-line:rgba(255,255,255,.14);
-  --send-line-press:rgba(255,255,255,.24);
+  --input-bg-focus:#262626;
+  --send-ink:#101010;
+  --send-fg:#ededed;
+  --btn-ink:#101010;
+  --send-grad:#242424;
+  --send-grad-press:#2e2e2e;
+  --send-line:rgba(255,255,255,.15);
+  --send-line-press:rgba(255,255,255,.26);
   --send-inset:inset 0 1px 0 rgba(255,255,255,.06);
 
   /* профиль */
-  --backdrop:rgba(0,0,0,.6);
-  --sheet-bg:#1c1b19;
-  --sheet-shadow:-30px 0 80px -44px rgba(0,0,0,.8);
-  --cover-bg:#2a2825;
-  --cover-fade:rgba(28,27,25,.45);
+  --backdrop:rgba(0,0,0,.62);
+  --sheet-bg:#181818;
+  --sheet-shadow:-30px 0 80px -44px rgba(0,0,0,.85);
+  --cover-bg:#262626;
+  --cover-fade:rgba(24,24,24,.45);
   --close-bg:rgba(255,255,255,.08);
   --close-bg-hover:rgba(255,255,255,.14);
-  --av-edit-bg:#232220;
+  --av-edit-bg:#222222;
   --pill-bg:rgba(255,255,255,.08);
-  --pill-line:rgba(255,255,255,.14);
-  --pill-ink:#e6e3de;
+  --pill-line:rgba(255,255,255,.15);
+  --pill-ink:#ededed;
   --pill-shadow:none;
   --pill-off-bg:rgba(255,255,255,.05);
   --stat-bg:rgba(255,255,255,.04);
   --section-bg:rgba(255,255,255,.04);
-  --key-ink:#d6d3cd;
+  --key-ink:#dedede;
   --stor-track:rgba(255,255,255,.10);
-  --stor-fill:#cfccc6;
+  --stor-fill:#e2e2e2;
 
   /* группы */
-  --grp-grad:#2b2a27;
-  --grp-line:rgba(255,255,255,.12);
-  --grp-ink:#e6e3de;
+  --grp-grad:#282828;
+  --grp-line:rgba(255,255,255,.13);
+  --grp-ink:#ededed;
   --system-bg:rgba(255,255,255,.06);
-  --sender:#c2bfb8;
+  --sender:#c6c6c6;
   --seg-bg:rgba(255,255,255,.06);
-  --seg-active:rgba(255,255,255,.10);
-  --gc-results-bg:#242320;
+  --seg-active:rgba(255,255,255,.11);
+  --gc-results-bg:#212121;
   --chip-bg:rgba(255,255,255,.08);
-  --chip-line:rgba(255,255,255,.14);
-  --chip-ink:#e6e3de;
+  --chip-line:rgba(255,255,255,.15);
+  --chip-ink:#ededed;
   --row-bg:rgba(255,255,255,.04);
-  --device-now-line:rgba(255,255,255,.18);
+  --device-now-line:rgba(255,255,255,.20);
 
   /* медиа */
   --media-bg:rgba(255,255,255,.06);
-  --shimmer:#262522;
-  --shimmer-soft:#232220;
-  --video-bg:#2a2926;
+  --shimmer:#242424;
+  --shimmer-soft:#212121;
+  --video-bg:#282828;
   --v-track:rgba(255,255,255,.24);
   --circle-ink:rgba(255,255,255,.40);
   --ring-stroke:rgba(255,255,255,.70);
-  --circle-badge-bg:rgba(28,27,25,.80);
-  --circle-badge-ink:#e8e5e0;
+  --circle-badge-bg:rgba(24,24,24,.82);
+  --circle-badge-ink:#ededed;
   --circle-tap:rgba(0,0,0,.16);
   --circle-tap-paused:rgba(0,0,0,.30);
   --audio-bg:rgba(255,255,255,.07);
   --audio-line:rgba(255,255,255,.13);
-  --audio-ink:#d6d3cd;
-  --audio-spin:#cfccc6;
+  --audio-ink:#dedede;
+  --audio-spin:#e2e2e2;
   --audio-spin-track:rgba(255,255,255,.16);
   --audio-spin-track-2:rgba(255,255,255,.16);
   --file-bg:rgba(255,255,255,.06);
@@ -2678,51 +2678,51 @@ html[data-theme="simple"]{
   --file-line:rgba(255,255,255,.10);
   --file-line-them:rgba(255,255,255,.08);
   --file-ico-bg:rgba(255,255,255,.08);
-  --file-ico-ink:#d6d3cd;
+  --file-ico-ink:#dedede;
   --pdf-bg:rgba(255,255,255,.08);
-  --pdf-ink:#c9c6c0;
+  --pdf-ink:#d0d0d0;
   --file-active-bg:rgba(255,255,255,.10);
   --file-active-line:rgba(255,255,255,.20);
-  --menu-bg:#242320;
-  --menu-shadow:0 24px 50px -28px rgba(0,0,0,.8);
-  --upload-bg:#242320;
-  --upload-shadow:0 16px 36px -24px rgba(0,0,0,.8);
+  --menu-bg:#212121;
+  --menu-shadow:0 24px 50px -28px rgba(0,0,0,.85);
+  --upload-bg:#212121;
+  --upload-shadow:0 16px 36px -24px rgba(0,0,0,.85);
   --upload-track:rgba(255,255,255,.12);
   --upload-done-line:rgba(255,255,255,.28);
-  --upload-err-line:rgba(208,138,134,.5);
-  --upload-err-ink:#d08a86;
+  --upload-err-line:rgba(216,138,138,.5);
+  --upload-err-ink:#d88a8a;
 
   /* запись */
-  --rec-veil:rgba(18,17,16,.98);
-  --rec-bar-bg:rgba(20,19,18,.98);
+  --rec-veil:rgba(16,16,16,.98);
+  --rec-bar-bg:rgba(18,18,18,.98);
   --rec-line:rgba(255,255,255,.14);
   --rec-bar-shadow:0 -14px 44px -30px #000;
   --rec-bar-inset:inset 0 1px 0 rgba(255,255,255,.05);
-  --rec-ink:#ece9e4;
+  --rec-ink:#f0f0f0;
   --rb-bg:rgba(255,255,255,.07);
   --rb-line:rgba(255,255,255,.12);
   --rb-bg-2:rgba(255,255,255,.08);
-  --rb-del-bg:rgba(208,138,134,.12);
-  --rb-del-line:rgba(208,138,134,.24);
-  --rec-live:#d97a76;
-  --rec-top:#ece9e4;
-  --rec-round-bg:#1d1c1a;
+  --rb-del-bg:rgba(216,138,138,.12);
+  --rb-del-line:rgba(216,138,138,.24);
+  --rec-live:#d98a8a;
+  --rec-top:#f0f0f0;
+  --rec-round-bg:#181818;
   --rec-round-shadow:0 34px 80px -34px #000,0 0 0 2px rgba(255,255,255,.10);
   --rec-hint:rgba(255,255,255,.50);
-  --rec-ring:conic-gradient(from -90deg,rgba(230,228,223,.95) calc(var(--p,0) * 1%),rgba(255,255,255,.12) 0);
+  --rec-ring:conic-gradient(from -90deg,rgba(240,240,240,.95) calc(var(--p,0) * 1%),rgba(255,255,255,.12) 0);
 
   /* шторка плеера */
-  --aud-bg:#20201e;
-  --aud-shadow:0 -18px 50px -30px rgba(0,0,0,.8);
+  --aud-bg:#1e1e1e;
+  --aud-shadow:0 -18px 50px -30px rgba(0,0,0,.85);
   --aud-inset:inset 0 1px 0 rgba(255,255,255,.06);
-  --aud-cover-bg:#2b2a27;
+  --aud-cover-bg:#282828;
   --aud-cover-line:rgba(255,255,255,.12);
   --aud-grab:rgba(255,255,255,.18);
   --aud-track:rgba(255,255,255,.12);
-  --aud-thumb:#cfccc6;
+  --aud-thumb:#e2e2e2;
   --aud-thumb-ring:0 0 0 3px rgba(255,255,255,.10);
-  --aud-menu-bg:#242320;
-  --toast-bg:rgba(32,31,29,.98);
+  --aud-menu-bg:#212121;
+  --toast-bg:rgba(30,30,30,.98);
 }
 
 /* плавная смена темы там, где браузер поддерживает view transitions */

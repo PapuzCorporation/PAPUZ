@@ -218,7 +218,7 @@ function presenceBadge(peer) {
 const THEME_KEY = 'papuz-theme';
 const THEME_COLORS = {
   dark: '#05080a', black: '#000000', light: '#f2f6f0', copper: '#0e0906',
-  neon: '#07050d', ocean: '#040b12', sakura: '#fbf4f7', simple: '#171614',
+  neon: '#07050d', ocean: '#040b12', sakura: '#fbf4f7', simple: '#101010',
 };
 const THEME_NAMES = {
   dark: 'Тёмная', black: 'Глубокий чёрный', light: 'Белая', copper: 'Медь',
