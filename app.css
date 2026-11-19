@@ -653,9 +653,8 @@ button{background:none;border:0;cursor:pointer}
 @media (hover:hover){.send:hover{background:var(--send-grad-press);border-color:var(--send-line-press)}}
 
 /* подписка на канал вместо поля ввода, пока не подписан */
-.ch-sub{display:flex;align-items:center;gap:12px;
+.ch-sub{display:flex;align-items:center;justify-content:center;
   padding:10px max(14px, calc((100% - 880px) / 2)) calc(12px + env(safe-area-inset-bottom))}
-.ch-sub-text{flex:1;min-width:0;font-size:12px;line-height:1.35;color:var(--muted-2)}
 .ch-sub-btn{width:auto;flex:none;padding:9px 18px;border-radius:22px;font-size:13px;box-shadow:none}
 
 /* ------------------------------------------------------------ профиль */
