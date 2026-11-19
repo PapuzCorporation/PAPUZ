@@ -227,7 +227,7 @@ const THEME_NAMES = {
 const THEMES = Object.keys(THEME_COLORS);
 
 /* режим снега: включается поверх любой темы */
-const SNOW_ENABLED = true;
+const SNOW_ENABLED = false;
 
 let snowBuilt = false;
 function ensureSnow() {
