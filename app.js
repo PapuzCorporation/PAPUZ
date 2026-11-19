@@ -3350,10 +3350,9 @@ function paintPeerSheet(peer) {
   $('#p-bio').textContent = bio || 'Без описания';
   $('#p-bio').classList.toggle('is-empty', !bio);
   setPeerSheetStatus(peer);
-  /* «Написать» есть всегда, кроме своего профиля и профиля,
-     открытого из чата с этим человеком: там поле ввода и так под рукой */
-  const fromChat = !!state.peerSheetId;
-  $('#p-chat').hidden = fromChat || (!!state.me && peer.id === state.me.id);
+  /* «Написать» есть всегда, кроме профиля, открытого из чата
+     с этим человеком: там поле ввода и так под рукой */
+  $('#p-chat').hidden = !!state.peerSheetId;
   fingerprint(peer.pubKey).then((f) => {
     $('#p-enc').textContent = f === '—' ? 'у собеседника нет ключа' : `ключ: ${f}`;
   });
@@ -3363,6 +3362,8 @@ function paintPeerSheet(peer) {
 $('#p-chat').addEventListener('click', () => {
   const user = state.peerSheetUser || state.peers.get(state.peerSheetId);
   if (!user) return;
+  /* свой профиль в предпросмотре: кнопка есть, но по нажатию ничего не делаем */
+  if (state.me && user.id === state.me.id) return;
   closePeerSheet();
   if (!groupSheet.hidden) closeGroupSheet();
   startChat(user);
