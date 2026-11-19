@@ -666,6 +666,12 @@
         <input id="gc-username" maxlength="21" placeholder="например, papuz" autocomplete="off"
                autocapitalize="none" spellcheck="false">
       </label>
+      <label class="field" id="gc-people-field">
+        <span class="field-label">Добавить людей</span>
+        <input id="gc-search" placeholder="Ник или имя" autocomplete="off">
+      </label>
+      <div class="gc-results" id="gc-results" hidden></div>
+      <div class="gc-picked" id="gc-picked"></div>
       <button class="btn primary" id="gc-create">Создать</button>
       <p class="pf-p small" id="gc-hint">В группе пишут все, в канале — только админы.</p>
     </div>
@@ -710,6 +716,11 @@
       <section class="pf-section" id="g-members-section">
         <h3 class="pf-h" id="g-members-h">Участники</h3>
         <div class="members" id="g-members"></div>
+        <div class="gc-inline" id="g-add-wrap" hidden>
+          <input id="g-add-search" placeholder="Ник или имя" autocomplete="off">
+          <div class="gc-results" id="g-add-results" hidden></div>
+        </div>
+        <button class="btn ghost small" id="g-add-btn" hidden>Добавить людей</button>
       </section>
 
       <div class="g-danger" id="g-danger" hidden>
@@ -756,6 +767,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/twemoji.min.js"></script>
-<script src="/app.js?v=99" type="module"></script>
+<script src="/app.js?v=100" type="module"></script>
 </body>
 </html>
