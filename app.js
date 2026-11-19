@@ -126,13 +126,12 @@ function groupAvatar(node, chat, sizeClass = 'av-md') {
 
 function peerStatusText(peer) {
   if (!peer) return 'не в сети';
-  if (peer.online) return peer.idle ? 'в сети · zzz' : 'в сети';
+  if (peer.online) return 'в сети';
   return peer.lastSeen ? `был(а) ${relTime(peer.lastSeen)}` : 'не в сети';
 }
 
 function applyPresence(peer, data) {
   peer.online = !!data.online;
-  peer.idle = !!(data.online && data.idle);
   if (!data.online) peer.lastSeen = Number(data.lastSeen) || 0;
 }
 
@@ -142,7 +141,6 @@ function rememberPresence(userId, data) {
   const prev = state.presenceSnapshot.get(userId);
   state.presenceSnapshot.set(userId, {
     online: !!data.online,
-    idle: !!(data.online && data.idle),
     lastSeen: Number(data.lastSeen) || prev?.lastSeen || 0,
   });
 }
@@ -205,17 +203,9 @@ function applyProfile(u) {
   if (changed) scheduleRenderChats();
 }
 
-/* точка присутствия или жёлтый «zzz», если человек в сети, но затих */
+/* точка присутствия в списке чатов */
 function presenceBadge(peer) {
   if (!peer) return null;
-  if (peer.online && peer.idle) {
-    const z = document.createElement('span');
-    z.className = 'presence-zzz';
-    z.textContent = 'zzz';
-    z.title = 'В сети, но не активен';
-    z.setAttribute('aria-label', 'В сети, но не активен');
-    return z;
-  }
   const dot = document.createElement('span');
   dot.className = 'presence-dot ' + (peer.online ? 'on' : 'off');
   dot.title = peer.online ? 'В сети' : (peer.lastSeen ? `Был(а) ${relTime(peer.lastSeen)}` : 'Не в сети');
@@ -681,23 +671,16 @@ function makeChatItem(c) {
 }
 
 function paintChatPresence(avWrap, peer) {
-  let badge = avWrap.querySelector('.presence-dot,.presence-zzz');
+  let badge = avWrap.querySelector('.presence-dot');
   if (!peer) { badge?.remove(); return; }
-  const wantZzz = !!(peer.online && peer.idle);
-  const isZzz = !!badge?.classList.contains('presence-zzz');
-  if (!badge || wantZzz !== isZzz) {
-    badge?.remove();
+  if (!badge) {
     badge = presenceBadge(peer);
     if (badge) avWrap.append(badge);
     return;
   }
-  if (wantZzz) {
-    badge.title = 'В сети, но не активен';
-  } else {
-    badge.classList.toggle('on', !!peer.online);
-    badge.classList.toggle('off', !peer.online);
-    badge.title = peer.online ? 'В сети' : (peer.lastSeen ? `Был(а) ${relTime(peer.lastSeen)}` : 'Не в сети');
-  }
+  badge.classList.toggle('on', !!peer.online);
+  badge.classList.toggle('off', !peer.online);
+  badge.title = peer.online ? 'В сети' : (peer.lastSeen ? `Был(а) ${relTime(peer.lastSeen)}` : 'Не в сети');
   badge.setAttribute('aria-label', badge.title);
 }
 
@@ -705,9 +688,9 @@ function paintChatLast(last, c, dmPeer) {
   last.textContent = '';
   last.style.color = '';
   if (!c.lastMessage) {
-    const tag = c.type === 'group' ? `${c.members} участн.` : c.type === 'channel' ? `${c.members} подписч.` : (dmPeer?.online ? (dmPeer.idle ? 'в сети · zzz' : 'в сети') : 'нет сообщений');
+    const tag = c.type === 'group' ? `${c.members} участн.` : c.type === 'channel' ? `${c.members} подписч.` : (dmPeer?.online ? 'в сети' : 'нет сообщений');
     last.textContent = tag;
-    last.style.color = c.type === 'dm' && dmPeer?.online ? (dmPeer.idle ? 'var(--idle-text)' : 'var(--mint)') : '';
+    last.style.color = c.type === 'dm' && dmPeer?.online ? 'var(--mint)' : '';
     return;
   }
   if (c.lastMessage.kind === 'system') {
@@ -928,7 +911,6 @@ function setPeerStatus(peer) {
   const el = $('#peer-status');
   el.textContent = peerStatusText(peer);
   el.classList.toggle('on', !!peer.online);
-  el.classList.toggle('idle', !!(peer.online && peer.idle));
 }
 
 function setPeerSheetStatus(peer) {
@@ -938,7 +920,6 @@ function setPeerSheetStatus(peer) {
   const pill = el.closest('.status-pill');
   if (!pill) return;
   pill.classList.toggle('off', !peer.online);
-  pill.classList.toggle('idle', !!(peer.online && peer.idle));
 }
 
 /* --------------------------------------------------------- медиа в чате */
@@ -4016,24 +3997,6 @@ $('#btn-logout').addEventListener('click', async () => {
 });
 
 /* ----------------------------------------------------------- websocket */
-
-/* активность: если 3 минуты ничего не делать, другие увидят «zzz» */
-let lastActivityAt = 0;
-function reportActivity(force = false) {
-  if (!state.me) return;
-  const ws = state.ws;
-  if (!ws || ws.readyState !== 1) return;
-  const t = Date.now();
-  if (!force && t - lastActivityAt < 5000) return;
-  lastActivityAt = t;
-  try { ws.send(JSON.stringify({ type: 'activity' })); } catch { /* сокет уже закрылся */ }
-}
-for (const ev of ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'touchmove']) {
-  window.addEventListener(ev, () => reportActivity(), { passive: true });
-}
-document.addEventListener('scroll', () => reportActivity(), { capture: true, passive: true });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) reportActivity(true); });
-window.addEventListener('focus', () => reportActivity(true));
 
 function connectWs() {
   if (state.ws && (state.ws.readyState === 0 || state.ws.readyState === 1)) return;

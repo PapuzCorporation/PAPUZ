@@ -281,6 +281,10 @@ button{background:none;border:0;cursor:pointer}
   animation:drift1 22s ease-in-out infinite alternate-reverse}
 @keyframes drift1{to{transform:translate3d(6vmax,4vmax,0) scale(1.08)}}
 @keyframes drift2{to{transform:translate3d(-5vmax,-4vmax,0) scale(1.1)}}
+/* на телефоне три больших фоновых слоя не двигаем: картинка та же, но без просадки FPS */
+@media (max-width:860px){
+  .glow{animation:none;will-change:auto;transform:none}
+}
 .grain{position:absolute;inset:0;opacity:var(--grain-opacity);
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
 
@@ -466,16 +470,6 @@ button{background:none;border:0;cursor:pointer}
   background:var(--muted-2);border:2.5px solid var(--online-ring);opacity:.5;
   transition:background .2s,opacity .2s,box-shadow .3s}
 .presence-dot.on{background:var(--mint);opacity:1;box-shadow:var(--presence-glow)}
-.presence-zzz{position:absolute;right:-5px;bottom:-2px;display:grid;place-items:center;
-  min-width:24px;height:15px;padding:0 4px;border-radius:8px;
-  font-size:8.5px;font-weight:700;letter-spacing:.05em;line-height:1;text-transform:lowercase;
-  color:var(--idle-ink);background:var(--idle-bg);border:2px solid var(--online-ring);
-  box-shadow:0 2px 7px -3px rgba(0,0,0,.5);
-  animation:zzzIn .3s var(--ease) both,zzzPulse 3.4s ease-in-out infinite}
-@keyframes zzzIn{from{opacity:0;transform:scale(.7) translateY(2px) rotate(-6deg)}
-  to{opacity:1;transform:rotate(-6deg)}}
-@keyframes zzzPulse{0%,100%{box-shadow:0 2px 7px -3px rgba(0,0,0,.5)}
-  50%{box-shadow:0 2px 7px -3px rgba(0,0,0,.5),0 0 9px 1px var(--idle-glow)}}
 
 .empty-list{padding:44px 26px;text-align:center;animation:rise .6s var(--ease) both}
 .empty-glyph{font-size:30px;opacity:.35;margin-bottom:8px}
@@ -514,7 +508,6 @@ button{background:none;border:0;cursor:pointer}
 .chat-head-name{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-head-status{font-size:11.5px;color:var(--muted-2);margin-top:1px;transition:color .3s}
 .chat-head-status.on{color:var(--mint)}
-.chat-head-status.idle{color:var(--idle-text)}
 
 /* ---- три точки: уведомления чата ---- */
 .chat-more-btn{flex:none}
@@ -706,8 +699,6 @@ button{background:none;border:0;cursor:pointer}
 .status-pill i{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:var(--pill-shadow)}
 .status-pill.off{background:var(--pill-off-bg);border-color:var(--line);color:var(--muted)}
 .status-pill.off i{background:var(--muted-2);box-shadow:none}
-.status-pill.idle{background:var(--idle-soft);border-color:var(--idle-line);color:var(--idle-text)}
-.status-pill.idle i{background:var(--idle-bg);box-shadow:0 0 8px var(--idle-glow)}
 .pf-form{display:flex;flex-direction:column;gap:2px;margin-bottom:18px}
 .pf-form .btn{margin-top:8px}
 .pf-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:6px 0 4px}
@@ -1275,7 +1266,6 @@ body.rec-voice .composer{opacity:0;pointer-events:none}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;
     transition-property:none!important}
-  .presence-zzz{animation:none!important}
 }
 
 /* ==================================================================
