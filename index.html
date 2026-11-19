@@ -666,12 +666,6 @@
         <input id="gc-username" maxlength="21" placeholder="например, papuz" autocomplete="off"
                autocapitalize="none" spellcheck="false">
       </label>
-      <label class="field">
-        <span class="field-label">Добавить людей</span>
-        <input id="gc-search" placeholder="Ник или имя" autocomplete="off">
-      </label>
-      <div class="gc-results" id="gc-results" hidden></div>
-      <div class="gc-picked" id="gc-picked"></div>
       <button class="btn primary" id="gc-create">Создать</button>
       <p class="pf-p small" id="gc-hint">В группе пишут все, в канале — только админы.</p>
     </div>
@@ -687,6 +681,10 @@
     <div class="profile">
       <div class="av-wrap">
         <span class="av av-xl grp" id="g-avatar"><span class="av-fallback">#</span></span>
+        <label class="av-edit" id="g-avatar-edit" for="g-avatar-file" role="button" aria-label="Сменить аватар" hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 8.5h3l1.6-2h6.8L17 8.5h3v10H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        </label>
+        <input type="file" id="g-avatar-file" accept="image/*" hidden>
       </div>
       <h2 class="pf-name" id="g-name">—</h2>
       <div class="pf-nick" id="g-sub">—</div>
@@ -712,11 +710,6 @@
       <section class="pf-section" id="g-members-section">
         <h3 class="pf-h" id="g-members-h">Участники</h3>
         <div class="members" id="g-members"></div>
-        <div class="gc-inline" id="g-add-wrap" hidden>
-          <input id="g-add-search" placeholder="Ник или имя" autocomplete="off">
-          <div class="gc-results" id="g-add-results" hidden></div>
-        </div>
-        <button class="btn ghost small" id="g-add-btn" hidden>Добавить людей</button>
       </section>
 
       <div class="g-danger" id="g-danger" hidden>
@@ -763,6 +756,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/twemoji.min.js"></script>
-<script src="/app.js?v=98" type="module"></script>
+<script src="/app.js?v=99" type="module"></script>
 </body>
 </html>

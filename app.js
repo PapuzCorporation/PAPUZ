@@ -2970,7 +2970,6 @@ $('#btn-new-2').addEventListener('click', () => searchInput.focus());
 const newSheet = $('#sheet-new');
 const groupSheet = $('#sheet-group');
 let newType = 'group';
-let pickedUsers = new Map();
 
 function sheetOpen(el, open) {
   el.hidden = !open;
@@ -2980,16 +2979,11 @@ function sheetOpen(el, open) {
 
 function openNewSheet() {
   newType = 'group';
-  pickedUsers = new Map();
   $$('#gc-type button').forEach((b) => b.classList.toggle('is-active', b.dataset.type === 'group'));
   $('#gc-name').value = '';
   $('#gc-username').value = '';
   $('#gc-username-field').hidden = true;
   $('#gc-hint').textContent = 'В группе пишут все участники.';
-  $('#gc-search').value = '';
-  $('#gc-results').hidden = true;
-  $('#gc-results').innerHTML = '';
-  $('#gc-picked').innerHTML = '';
   sheetOpen(newSheet, true);
   setTimeout(() => $('#gc-name').focus(), 60);
 }
@@ -3008,88 +3002,10 @@ $$('#gc-type button').forEach((b) => b.addEventListener('click', () => {
   newType = b.dataset.type;
   $$('#gc-type button').forEach((x) => x.classList.toggle('is-active', x === b));
   $('#gc-username-field').hidden = newType !== 'channel';
-  if (newType === 'channel' && pickedUsers.size > 3) {
-    const keep = [...pickedUsers.keys()].slice(0, 3);
-    pickedUsers = new Map(keep.map((id) => [id, pickedUsers.get(id)]));
-    renderPicked();
-    toast('В канал можно добавить не больше 3 человек за раз');
-  }
   $('#gc-hint').textContent = newType === 'channel'
-    ? 'В канале пишут только админы, остальные читают. За раз — не больше 3 человек.'
+    ? 'В канале пишут только админы. Отправь @юзернейм друзьям — они подпишутся сами.'
     : 'В группе пишут все участники.';
 }));
-
-let gcTimer = null;
-$('#gc-search').addEventListener('input', () => {
-  clearTimeout(gcTimer);
-  const q = $('#gc-search').value.trim();
-  if (q.length < 2) { $('#gc-results').hidden = true; return; }
-  gcTimer = setTimeout(() => searchForPicking(q, $('#gc-results'), (u) => addPicked(u)), 240);
-});
-
-async function searchForPicking(q, box, onPick, excludeIds = new Set()) {
-  try {
-    const { users } = await api(`/api/users?q=${encodeURIComponent(q)}`);
-    box.innerHTML = '';
-    const fresh = users.filter((u) => u.id !== state.me.id && !pickedUsers.has(u.id) && !excludeIds.has(u.id));
-    if (!fresh.length) {
-      const d = document.createElement('div');
-      d.className = 'result-none';
-      d.textContent = 'Никого не нашли';
-      box.append(d);
-    }
-    for (const u of fresh) {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'result';
-      const av = document.createElement('span');
-      avatarEl(av, u, 'av-sm');
-      const meta = document.createElement('div');
-      meta.className = 'result-name';
-      meta.textContent = u.displayName;
-      const nick = document.createElement('div');
-      nick.className = 'result-nick';
-      nick.textContent = '@' + u.username;
-      const wrap = document.createElement('div');
-      wrap.append(meta, nick);
-      b.append(av, wrap);
-      b.addEventListener('click', () => onPick(u));
-      box.append(b);
-    }
-    box.hidden = false;
-  } catch (err) {
-    toast(err.message);
-  }
-}
-
-function addPicked(u) {
-  if (pickedUsers.has(u.id)) return;
-  if (newType === 'channel' && pickedUsers.size >= 3) {
-    return toast('В канал можно добавить не больше 3 человек за раз');
-  }
-  pickedUsers.set(u.id, u);
-  $('#gc-results').hidden = true;
-  $('#gc-search').value = '';
-  renderPicked();
-}
-
-function renderPicked() {
-  const box = $('#gc-picked');
-  box.innerHTML = '';
-  for (const u of pickedUsers.values()) {
-    const chip = document.createElement('span');
-    chip.className = 'chip';
-    const name = document.createElement('span');
-    name.textContent = u.displayName;
-    const x = document.createElement('button');
-    x.type = 'button';
-    x.className = 'chip-x';
-    x.textContent = '✕';
-    x.addEventListener('click', () => { pickedUsers.delete(u.id); renderPicked(); });
-    chip.append(name, x);
-    box.append(chip);
-  }
-}
 
 $('#gc-create').addEventListener('click', async () => {
   const title = $('#gc-name').value.trim();
@@ -3100,14 +3016,13 @@ $('#gc-create').addEventListener('click', async () => {
     if (!/^[a-z0-9_]{3,20}$/.test(username)) {
       return toast('Юзернейм: 3–20 символов, латиница, цифры, _');
     }
-    if (pickedUsers.size > 3) return toast('В канал можно добавить не больше 3 человек за раз');
   }
   const btn = $('#gc-create');
   btn.disabled = true;
   try {
     const { chat } = await api('/api/groups', {
       method: 'POST',
-      body: JSON.stringify({ title, type: newType, username, memberIds: [...pickedUsers.keys()] }),
+      body: JSON.stringify({ title, type: newType, username }),
     });
     closeNewSheet();
     state.chats.unshift(chat);
@@ -3163,10 +3078,8 @@ async function openGroupSheet(chatId) {
   $('#g-members-section').classList.toggle('is-single', ownerOnly);
   $('#g-members-h').hidden = ownerOnly;
   $('#g-members-h').textContent = 'Участники';
-  $('#g-add-btn').hidden = !canEdit;
-  $('#g-add-wrap').hidden = true;
-  $('#g-add-search').value = '';
-  $('#g-add-results').hidden = true;
+  $('#g-avatar-edit').hidden = !canEdit;
+  $('#g-avatar-file').value = '';
   renderMembers(chat, members);
   sheetOpen(groupSheet, true);
 }
@@ -3267,28 +3180,32 @@ $('#g-form').addEventListener('submit', async (e) => {
   }
 });
 
-$('#g-add-btn').addEventListener('click', () => {
-  const wrap = $('#g-add-wrap');
-  wrap.hidden = !wrap.hidden;
-  if (!wrap.hidden) setTimeout(() => $('#g-add-search').focus(), 50);
-});
-
-let gAddTimer = null;
-$('#g-add-search').addEventListener('input', () => {
-  clearTimeout(gAddTimer);
-  const q = $('#g-add-search').value.trim();
-  const box = $('#g-add-results');
-  if (q.length < 2) { box.hidden = true; return; }
-  gAddTimer = setTimeout(() => searchForPicking(q, box, async (u) => {
-    try {
-      await api(`/api/chats/${groupChatId}/members`, { method: 'POST', body: JSON.stringify({ userId: u.id }) });
-      $('#g-add-search').value = '';
-      box.hidden = true;
-      openGroupSheet(groupChatId);
-    } catch (err) {
-      toast(err.message);
-    }
-  }, new Set((state.members.get(groupChatId) || []).map((m) => m.id))), 240);
+$('#g-avatar-file').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  if (!file || !groupChatId) return;
+  if (file.size > 25 * 1024 * 1024) return toast('Файл слишком большой');
+  const chatId = groupChatId;
+  const t = toast('Сжимаю…', 6000);
+  try {
+    const blob = await compressAvatar(file);
+    if (!blob) throw new Error('Не получилось сжать');
+    const { chat } = await api(`/api/chats/${chatId}/avatar`, {
+      method: 'PUT',
+      body: blob,
+      headers: { 'content-type': 'image/jpeg' },
+    });
+    const local = state.chats.find((c) => c.id === chatId);
+    if (local) Object.assign(local, chat);
+    groupAvatar($('#g-avatar'), chat, 'av-xl');
+    if (state.activeId === chatId) groupAvatar($('#peer-avatar'), chat, 'av-sm');
+    scheduleRenderChats();
+    clearTimeout(t);
+    toast('Аватар обновлён');
+  } catch (err) {
+    clearTimeout(t);
+    toast(err.message);
+  }
 });
 
 $('#g-delete').addEventListener('click', () => {
