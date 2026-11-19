@@ -34,7 +34,7 @@
 <meta name="twitter:title" content="PAPUZ">
 <meta name="twitter:description" content="Тихий мессенджер для своих">
 <meta name="twitter:image" content="https://papuz.ru/og-image.png">
-<link rel="stylesheet" href="/app.css?v=83">
+<link rel="stylesheet" href="/app.css?v=84">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -421,6 +421,15 @@
               </span>
               <span class="set-chev">›</span>
             </button>
+
+            <button class="set-row" type="button" data-open-view="tasks">
+              <span class="set-ico"><svg viewBox="0 0 24 24" width="19" height="19"><path d="M9 5H7.5A2.5 2.5 0 0 0 5 7.5v11A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5v-11A2.5 2.5 0 0 0 16.5 5H15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="9" y="3" width="6" height="4" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M9 12h6M9 16h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+              <span class="set-row-body">
+                <span class="set-row-title">Задания</span>
+                <span class="set-row-sub" id="set-tasks-sub">Пока нет заданий</span>
+              </span>
+              <span class="set-chev">›</span>
+            </button>
           </div>
 
           <div class="set-group">
@@ -591,6 +600,17 @@
         </div>
       </section>
 
+      <!-- задания -->
+      <section class="set-view" data-view="tasks">
+        <div class="set-scroll">
+          <div class="tasks-empty">
+            <span class="tasks-empty-ico"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M9 5H7.5A2.5 2.5 0 0 0 5 7.5v11A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5v-11A2.5 2.5 0 0 0 16.5 5H15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><rect x="9" y="3" width="6" height="4" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M9 12h6M9 16h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+            <p class="tasks-empty-title">Пока пусто</p>
+            <p class="tasks-empty-text">Здесь появятся задания.</p>
+          </div>
+        </div>
+      </section>
+
       <!-- пароль -->
       <section class="set-view" data-view="password">
         <div class="set-scroll">
@@ -743,6 +763,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/twemoji.min.js"></script>
-<script src="/app.js?v=97" type="module"></script>
+<script src="/app.js?v=98" type="module"></script>
 </body>
 </html>

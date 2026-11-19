@@ -3436,6 +3436,7 @@ const SET_TITLES = {
   theme: 'Оформление',
   storage: 'Хранилище',
   crypto: 'Шифрование',
+  tasks: 'Задания',
   password: 'Пароль',
   devices: 'Устройства',
 };
