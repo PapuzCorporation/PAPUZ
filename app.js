@@ -218,15 +218,16 @@ function presenceBadge(peer) {
 const THEME_KEY = 'papuz-theme';
 const THEME_COLORS = {
   dark: '#05080a', black: '#000000', light: '#f2f6f0', copper: '#0e0906',
-  neon: '#07050d', ocean: '#040b12', sakura: '#fbf4f7', winter: '#08121b',
-  simple: '#101010',
+  neon: '#07050d', ocean: '#040b12', sakura: '#fbf4f7', simple: '#101010',
 };
 const THEME_NAMES = {
   dark: 'Тёмная', black: 'Глубокий чёрный', light: 'Белая', copper: 'Медь',
-  neon: 'Неон', ocean: 'Океан', sakura: 'Сакура', winter: 'Зимняя',
-  simple: 'Простая',
+  neon: 'Неон', ocean: 'Океан', sakura: 'Сакура', simple: 'Простая',
 };
 const THEMES = Object.keys(THEME_COLORS);
+
+/* режим снега: включается поверх любой темы */
+const SNOW_ENABLED = true;
 
 let snowBuilt = false;
 function ensureSnow() {
@@ -254,9 +255,13 @@ function ensureSnow() {
   snowBuilt = true;
 }
 
+function applySnow() {
+  document.documentElement.dataset.snow = SNOW_ENABLED ? 'on' : 'off';
+  if (SNOW_ENABLED) ensureSnow();
+}
+
 function paintTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  if (theme === 'winter') ensureSnow();
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', THEME_COLORS[theme] || THEME_COLORS.dark);
   for (const btn of $$('[data-theme-set]')) {
@@ -292,6 +297,7 @@ window.addEventListener('storage', (e) => {
 paintTheme(THEMES.includes(document.documentElement.dataset.theme)
   ? document.documentElement.dataset.theme
   : 'dark');
+applySnow();
 
 /* --------------------------------------------------------------- ключи */
 
