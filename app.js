@@ -653,12 +653,6 @@ function makeChatItem(c) {
   const btn = document.createElement('button');
   btn.className = 'chat-item is-new';
   btn.dataset.chat = String(c.id);
-  const clearNew = (e) => {
-    if (e.target !== btn) return;
-    btn.classList.remove('is-new');
-    btn.removeEventListener('animationend', clearNew);
-  };
-  btn.addEventListener('animationend', clearNew);
 
   const avWrap = document.createElement('span');
   avWrap.className = 'chat-av';
@@ -819,6 +813,23 @@ function renderChats() {
     next = after;
   }
   if (list.scrollTop !== scrollTop) list.scrollTop = scrollTop;
+}
+
+$('#chat-list').addEventListener('animationend', (e) => {
+  if (e.animationName === 'itemIn') e.target.classList.remove('is-new');
+});
+
+/* короткое появление списка — только когда возвращаемся из чата или настроек */
+function replayChatsIntro() {
+  const list = $('#chat-list');
+  const items = list ? [...list.querySelectorAll('.chat-item')] : [];
+  if (!items.length) return;
+  items.forEach((el, i) => {
+    el.classList.remove('is-new');
+    el.style.setProperty('--i', String(i));
+  });
+  void list.offsetWidth;
+  items.forEach((el) => el.classList.add('is-new'));
 }
 
 function buildEmpty() {
@@ -2653,6 +2664,7 @@ $('#btn-back').addEventListener('click', () => {
   $('#chat-body').hidden = true;
   $('#chat-empty').hidden = false;
   scheduleRenderChats();
+  requestAnimationFrame(replayChatsIntro);
 });
 
 /* --------------------------------------------------------------- поиск */
@@ -3506,9 +3518,11 @@ function openProfile() {
   document.body.style.overflow = 'hidden';
 }
 function closeProfile() {
+  const wasOpen = !$('#sheet').hidden;
   $('#sheet').hidden = true;
   setSettingsView('main');
   document.body.style.overflow = '';
+  if (wasOpen && state.activeId === null) requestAnimationFrame(replayChatsIntro);
 }
 
 $('#btn-me').addEventListener('click', openProfile);
