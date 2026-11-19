@@ -289,8 +289,9 @@ button{background:none;border:0;cursor:pointer}
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
 
 /* снег — режим для всех тем */
-.snow{position:fixed;inset:0;z-index:2;pointer-events:none;overflow:hidden;display:none}
+.snow{position:fixed;inset:0;z-index:2;pointer-events:none;overflow:hidden;display:none;contain:strict}
 html[data-snow="on"] .snow{display:block}
+
 .snow i{position:absolute;top:0;left:0;animation:snowfall linear infinite;will-change:transform}
 .snow i b{display:block;width:100%;height:100%;border-radius:50%;background:var(--snow-ink,#f4fbff);
   box-shadow:0 0 4px var(--snow-glow,rgba(200,235,255,.42));
@@ -2744,12 +2745,6 @@ html[data-theme="simple"]{
   --aud-thumb-ring:0 0 0 3px rgba(255,255,255,.10);
   --aud-menu-bg:#212121;
   --toast-bg:rgba(30,30,30,.98);
-}
-
-/* плавная смена темы там, где браузер поддерживает view transitions */
-::view-transition-old(root),::view-transition-new(root){
-  animation-duration:.34s;
-  animation-timing-function:var(--ease);
 }
 
 /* honeypot: поле есть в разметке, человек его не видит и не заполняет */

@@ -246,7 +246,6 @@ function ensureSnow() {
     flake.style.animationDuration = (near ? 8 + Math.random() * 6 : 12 + Math.random() * 14).toFixed(1) + 's';
     flake.style.animationDelay = (-Math.random() * 24).toFixed(1) + 's';
     flake.style.setProperty('--drift', (Math.random() * 90 - 45).toFixed(0) + 'px');
-    if (near) flake.style.filter = 'blur(.5px)';
     dot.style.animationDuration = (2.6 + Math.random() * 3.8).toFixed(1) + 's';
     dot.style.animationDelay = (-Math.random() * 6).toFixed(1) + 's';
     flake.append(dot);
@@ -278,11 +277,7 @@ function applyTheme(theme, persist = true) {
   if (persist) {
     try { localStorage.setItem(THEME_KEY, theme); } catch { /* приватный режим */ }
   }
-  if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    document.startViewTransition(() => paintTheme(theme));
-  } else {
-    paintTheme(theme);
-  }
+  paintTheme(theme);
 }
 
 $$('[data-theme-set]').forEach((btn) => {
