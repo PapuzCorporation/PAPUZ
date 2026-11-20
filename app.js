@@ -22,6 +22,8 @@ const state = {
   peerSheetId: null,
   peerSheetUser: null,    // профиль участника, открытый из списка группы
   messages: new Map(),
+  freshChats: new Set(),   // чаты, которые уже сверены с сервером в этой сессии
+  hydratedChats: new Set(),// чаты, чья переписка поднята из кэша целиком
   notify: null,           // привязка Telegram и общие настройки уведомлений
   notifyCode: null,       // выданный одноразовый код, пока бот не привязан
   notifyPoll: null,
@@ -534,6 +536,255 @@ async function plainOf(chatId, m) {
   return text;
 }
 
+/* ---------------------------------------------------------- кэш чатов */
+
+/* Последние 5 открытых чатов храним в IndexedDB: при следующем входе
+   список и переписка появляются сразу, а сеть догоняет в фоне.
+   Кладём только то, что и так лежит на сервере: шифртекст сообщений
+   и зашифрованные файлы, без расшифрованного текста. */
+const CACHE_DB = 'papuz-cache';
+const CACHE_KEEP_CHATS = 5;
+const CACHE_CHAT_MESSAGES = 300;   // хвост переписки на чат, чтобы кэш не разрастался
+const CACHE_MEDIA_ITEM = 6 * 1024 * 1024;
+const CACHE_MEDIA_TOTAL = 48 * 1024 * 1024;
+const CACHE_MEDIA_COUNT = 100;
+
+let cacheDB = null;
+let cacheOpening = null;
+/* индекс кэша — объект: параллельные записи теряли бы изменения, поэтому в очередь */
+let cacheChain = Promise.resolve();
+
+function cacheSerial(fn) {
+  const next = cacheChain.then(fn, fn);
+  cacheChain = next.then(() => {}, () => {});
+  return next;
+}
+
+function cacheOpen() {
+  if (cacheDB) return Promise.resolve(cacheDB);
+  if (cacheOpening) return cacheOpening;
+  cacheOpening = new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) return reject(new Error('no indexedDB'));
+    const req = indexedDB.open(CACHE_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+    };
+    req.onsuccess = () => { cacheDB = req.result; resolve(cacheDB); };
+    req.onerror = () => reject(req.error || new Error('cache'));
+    req.onblocked = () => reject(new Error('cache blocked'));
+  }).catch((err) => { cacheOpening = null; throw err; });
+  return cacheOpening;
+}
+
+function cacheName(part) {
+  return state.me ? `u${state.me.id}:${part}` : '';
+}
+
+async function cacheRead(key) {
+  try {
+    const db = await cacheOpen();
+    return await new Promise((resolve) => {
+      const req = db.transaction('kv', 'readonly').objectStore('kv').get(key);
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror = () => resolve(null);
+    });
+  } catch { return null; }
+}
+
+async function cacheWrite(key, value) {
+  try {
+    const db = await cacheOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(value, key);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+    return true;
+  } catch { return false; }
+}
+
+async function cacheRemove(key) {
+  try {
+    const db = await cacheOpen();
+    await new Promise((resolve) => {
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').delete(key);
+      tx.oncomplete = resolve;
+      tx.onerror = resolve;
+      tx.onabort = resolve;
+    });
+  } catch { /* ignore */ }
+}
+
+async function cacheKeyList(prefix) {
+  try {
+    const db = await cacheOpen();
+    const keys = await new Promise((resolve) => {
+      const req = db.transaction('kv', 'readonly').objectStore('kv').getAllKeys();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+    return keys.filter((k) => String(k).startsWith(prefix));
+  } catch { return []; }
+}
+
+function cacheClear() {
+  return cacheSerial(cacheClearNow);
+}
+
+async function cacheClearNow() {
+  try {
+    const db = await cacheOpen();
+    await new Promise((resolve) => {
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').clear();
+      tx.oncomplete = resolve;
+      tx.onerror = resolve;
+      tx.onabort = resolve;
+    });
+  } catch { /* ignore */ }
+}
+
+let chatsCacheTimer = 0;
+function queueChatsCache() {
+  clearTimeout(chatsCacheTimer);
+  chatsCacheTimer = setTimeout(() => {
+    if (!state.me) return;
+    const chats = state.chats.filter((c) => !c.preview);
+    cacheSerial(() => cacheWrite(cacheName('chats'), { at: Date.now(), chats }));
+  }, 250);
+}
+
+function cacheTouchChat(chatId) {
+  return cacheSerial(() => cacheTouchChatNow(chatId));
+}
+
+async function cacheTouchChatNow(chatId) {
+  if (!state.me) return;
+  const idxKey = cacheName('chatIndex');
+  const idx = (await cacheRead(idxKey)) || {};
+  idx[chatId] = Date.now();
+  const keep = Object.entries(idx)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, CACHE_KEEP_CHATS);
+  const keepIds = new Set(keep.map(([id]) => String(id)));
+  for (const id of Object.keys(idx)) {
+    if (keepIds.has(String(id))) continue;
+    delete idx[id];
+    await cacheRemove(cacheName(`chat:${id}`));
+    await cacheDeleteChatMedia(id);
+  }
+  await cacheWrite(idxKey, Object.fromEntries(keep));
+}
+
+async function cacheSaveChat(chatId) {
+  const list = state.messages.get(chatId);
+  if (!state.me || !list?.length) return;
+  await cacheWrite(cacheName(`chat:${chatId}`), {
+    at: Date.now(),
+    messages: list.slice(-CACHE_CHAT_MESSAGES),
+  });
+  await cacheTouchChat(chatId);
+}
+
+function saveChatCache(chatId) {
+  cacheSaveChat(chatId).catch(() => {});
+}
+
+async function cacheDeleteChatMedia(chatId) {
+  const prefix = cacheName(`media:${chatId}:`);
+  const keys = await cacheKeyList(prefix);
+  for (const key of keys) await cacheRemove(key);
+  if (!keys.length) return;
+  const idxKey = cacheName('mediaIndex');
+  const idx = (await cacheRead(idxKey)) || {};
+  let changed = false;
+  for (const key of Object.keys(idx)) {
+    if (key.startsWith(prefix)) { delete idx[key]; changed = true; }
+  }
+  if (changed) await cacheWrite(idxKey, idx);
+}
+
+async function cacheMediaGet(chatId, mediaId) {
+  if (!state.me) return null;
+  return cacheRead(cacheName(`media:${chatId}:${mediaId}`));
+}
+
+function cacheMediaPut(chatId, media, data, type) {
+  return cacheSerial(() => cacheMediaPutNow(chatId, media, data, type));
+}
+
+async function cacheMediaPutNow(chatId, media, data, type) {
+  if (!state.me || data.byteLength > CACHE_MEDIA_ITEM) return;
+  const key = cacheName(`media:${chatId}:${media.id}`);
+  if (!(await cacheWrite(key, { at: Date.now(), type, data }))) return;
+  const idxKey = cacheName('mediaIndex');
+  const idx = (await cacheRead(idxKey)) || {};
+  idx[key] = { at: Date.now(), size: data.byteLength };
+  const keys = Object.keys(idx).sort((a, b) => (idx[b].at || 0) - (idx[a].at || 0));
+  const keep = new Set();
+  let total = 0;
+  for (const k of keys) {
+    const size = idx[k].size || 0;
+    if (keep.size >= CACHE_MEDIA_COUNT || total + size > CACHE_MEDIA_TOTAL) break;
+    keep.add(k);
+    total += size;
+  }
+  for (const k of keys) {
+    if (keep.has(k)) continue;
+    delete idx[k];
+    await cacheRemove(k);
+  }
+  await cacheWrite(idxKey, idx);
+}
+
+async function hydrateCache() {
+  if (!state.me || !('indexedDB' in window)) return;
+  const uid = state.me.id;
+  const saved = await cacheRead(`u${uid}:chats`);
+  if (saved?.chats?.length && !state.chats.length) {
+    state.chats = saved.chats;
+    for (const chat of state.chats) if (chat.peer) state.peers.set(chat.id, chat.peer);
+    scheduleRenderChats();
+    decryptPreviews();
+  }
+  const idx = (await cacheRead(`u${uid}:chatIndex`)) || {};
+  const ids = Object.entries(idx)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, CACHE_KEEP_CHATS)
+    .map(([id]) => Number(id))
+    .filter(Number.isFinite);
+  for (const id of ids) {
+    if (state.messages.has(id)) continue;
+    const rec = await cacheRead(`u${uid}:chat:${id}`);
+    if (rec?.messages?.length) {
+      state.messages.set(id, mergeMessages(id, rec.messages));
+      state.hydratedChats.add(id);
+    }
+  }
+}
+
+async function refreshChatMessages(chatId) {
+  try {
+    const { messages } = await api(`/api/chats/${chatId}/messages`);
+    state.freshChats.add(chatId);
+    const prev = state.messages.get(chatId) || [];
+    const merged = mergeMessages(chatId, messages);
+    state.messages.set(chatId, merged);
+    state.hydratedChats.add(chatId);
+    saveChatCache(chatId);
+    if (state.activeId !== chatId) return;
+    if (merged.length === prev.length && merged.every((m, i) => m.id === prev[i].id)) return;
+    const wrap = $('#messages');
+    const nearBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 120;
+    await renderMessages(chatId, { keepScroll: !nearBottom });
+    if (nearBottom) wrap.scrollTop = wrap.scrollHeight;
+  } catch { /* нет сети — остаёмся на кэше */ }
+}
+
 /* ---------------------------------------------------------------- вход */
 
 let authMode = 'login';
@@ -560,7 +811,8 @@ function showApp() {
   fillProfile();
   refreshStats().then(fillProfile);
   loadNotifications();
-  loadChats();
+  hydrateCache().catch(() => {});
+  loadChats().catch(() => {});
   connectWs();
 }
 
@@ -670,12 +922,16 @@ async function loadChats() {
   for (const p of previews) {
     if (!chats.some((c) => c.id === p.id)) state.chats.unshift(p);
   }
+  /* чат только что создан или открыт: ответ списка мог прийти раньше — не теряем его */
+  const active = state.chats.find((c) => c.id === state.activeId);
+  if (active && !chats.some((c) => c.id === active.id)) state.chats.unshift(active);
   for (const c of chats) if (c.peer) state.peers.set(c.id, c.peer);
   /* API мог ответить раньше, чем presence: возвращаем свежий статус */
   applyStoredPresence();
   scheduleRenderChats();
   decryptPreviews();
   refreshActiveHeader();
+  queueChatsCache();
 }
 
 function refreshActiveHeader() {
@@ -1065,13 +1321,25 @@ async function openChat(chatId) {
 
   scheduleRenderChats();
 
-  if (!state.messages.has(chatId)) {
+  let fromCache = false;
+  const known = state.messages.has(chatId);
+  /* в памяти могло быть только последнее сообщение из сокета — это не история */
+  const complete = state.freshChats.has(chatId) || state.hydratedChats.has(chatId);
+  if (!known || !complete) {
     const { messages } = await api(`/api/chats/${chatId}/messages`);
     state.messages.set(chatId, mergeMessages(chatId, messages));
+    state.freshChats.add(chatId);
+    saveChatCache(chatId);
+  } else if (!state.freshChats.has(chatId)) {
+    fromCache = true;
   }
   /* пока грузили, могли открыть другой чат — старое сообщение сюда не рисуем */
   if (state.activeId !== chatId) return;
   await renderMessages(chatId);
+  if (fromCache) {
+    cacheTouchChat(chatId).catch(() => {});
+    refreshChatMessages(chatId);
+  }
   if (state.activeId === chatId && !chat?.preview) markRead(chatId);
 }
 
@@ -1121,10 +1389,8 @@ const lazyIO = new IntersectionObserver((entries) => {
   }
 }, { root: null, rootMargin: '500px 0px' });
 
-async function mediaBlob(chatId, media) {
-  const res = await fetch(`/api/media/${media.id}`, { credentials: 'same-origin' });
-  if (!res.ok) throw new Error('Файл недоступен');
-  let blob = await res.blob();
+async function decodeMediaBytes(data, type, media, chatId) {
+  let blob = new Blob([data], { type: type || '' });
   if (media.enc) {
     const key = await getChatKey(chatId);
     if (!key) throw new Error('Нет ключа шифрования');
@@ -1133,6 +1399,20 @@ async function mediaBlob(chatId, media) {
     blob = new Blob([blob], { type: media.mime });
   }
   return blob;
+}
+
+async function mediaBlob(chatId, media) {
+  const cached = await cacheMediaGet(chatId, media.id);
+  if (cached?.data) {
+    try { return await decodeMediaBytes(cached.data, cached.type, media, chatId); }
+    catch { cacheRemove(cacheName(`media:${chatId}:${media.id}`)); }
+  }
+  const res = await fetch(`/api/media/${media.id}`, { credentials: 'same-origin' });
+  if (!res.ok) throw new Error('Файл недоступен');
+  const data = await res.arrayBuffer();
+  const type = res.headers.get('content-type') || '';
+  cacheMediaPut(chatId, media, data, type).catch(() => {});
+  return decodeMediaBytes(data, type, media, chatId);
 }
 
 async function mediaURL(chatId, media) {
@@ -2209,6 +2489,8 @@ async function appendMessage(chatId, m) {
   if (list.some((x) => x.id === m.id)) return;
   const prev = list[list.length - 1];
   list.push(m);
+  /* сохраняем только полную историю, а не одинокое сообщение из сокета */
+  if (state.freshChats.has(chatId) || state.hydratedChats.has(chatId)) saveChatCache(chatId);
   const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
   if (isChannelChat && isChannelMemberNotice(m)) return;
   const text = await plainOf(chatId, m);
@@ -2419,6 +2701,7 @@ async function deliver(chatId, payload, mediaIds, plainText = '') {
   }
   state.chats = [chat, ...state.chats.filter((c) => c.id !== chatId)].filter(Boolean);
   scheduleRenderChats();
+  queueChatsCache();
   return message;
 }
 
@@ -4253,8 +4536,12 @@ function resetClientState() {
   for (const url of state.blobs.values()) URL.revokeObjectURL(url);
   state.blobs.clear();
   state.rawBlobs.clear();
+  state.freshChats.clear();
+  state.hydratedChats.clear();
+  clearTimeout(chatsCacheTimer);
   state.activeId = null;
   state.wsRetry = 0;
+  cacheClear();
 }
 
 $('#btn-logout').addEventListener('click', async () => {
@@ -4327,6 +4614,7 @@ function connectWs() {
         if (m.chatId !== state.activeId && !isMine(m)) chat.unread = (chat.unread || 0) + 1;
         state.chats = [chat, ...state.chats.filter((c) => c.id !== m.chatId)];
         scheduleRenderChats();
+        queueChatsCache();
         if (m.chatId === state.activeId) markRead(m.chatId);
       });
     }

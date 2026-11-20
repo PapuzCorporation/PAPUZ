@@ -695,20 +695,6 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .send.is-circle .ico{width:20px;height:20px}
 .send[disabled]{opacity:.4;border-color:var(--send-line);background:var(--send-grad),var(--glass-bg,var(--card-bg))}
 @media (hover:hover){.send:hover{background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}}
-/* в тёмных темах кнопка записи/отправки — плотный акцент, как play:
-   на светлых обоях полупрозрачная заливка сливалась с фоном */
-:is(html[data-theme="dark"],html[data-theme="black"],html[data-theme="copper"],
-  html[data-theme="neon"],html[data-theme="ocean"],html[data-theme="simple"]) .send{
-  color:var(--play-ink,var(--btn-ink));
-  background:var(--play-bg,var(--accent-grad-2));
-  border-color:var(--play-line,rgba(255,255,255,.14));
-  box-shadow:0 8px 18px -12px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.3);
-}
-:is(html[data-theme="dark"],html[data-theme="black"],html[data-theme="copper"],
-  html[data-theme="neon"],html[data-theme="ocean"],html[data-theme="simple"]) .send:active{
-  background:var(--play-bg,var(--accent-grad-2));
-  filter:brightness(.96);
-}
 
 /* подписка на канал вместо поля ввода, пока не подписан */
 .ch-sub{display:flex;align-items:center;justify-content:center;
