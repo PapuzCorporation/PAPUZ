@@ -646,16 +646,24 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .typing span:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
 
+/* композер и служебные строки — над обоями: фон чата продолжается
+   под кнопками, а не обрывается белой полосой */
+.composer,.typing,.ch-sub{position:relative;z-index:1}
 .composer{display:flex;align-items:flex-end;gap:7px;
   padding:8px max(12px, calc((100% - 880px) / 2)) calc(8px + env(safe-area-inset-bottom))}
 .c-btn{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;
-  color:var(--c-btn-ink);background:var(--c-btn-bg);border:1px solid var(--c-btn-line);
+  color:var(--c-btn-ink);background:var(--card-bg);border:1px solid var(--c-btn-line);
+  box-shadow:0 10px 24px -18px rgba(0,0,0,.55);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
   transition:transform .16s var(--ease),background .2s,color .2s}
-.c-btn .ico{width:21px;height:21px}
+.c-btn .ico{width:21px;height:21px;pointer-events:none}
 .c-btn:active{transform:scale(.93);background:var(--c-btn-bg-active)}
-.c-btn[aria-expanded="true"]{color:var(--send-fg);background:var(--send-grad-press);border-color:var(--send-line-press)}
+.c-btn[aria-expanded="true"]{color:var(--send-fg);background:var(--send-grad-press),var(--card-bg);border-color:var(--send-line-press)}
 .c-field{flex:1;min-width:0;display:flex;align-items:flex-end;padding:2px 4px 2px 15px;border-radius:22px;
-  background:var(--input-bg);border:1px solid var(--line);transition:border-color .2s,background .2s}
+  background:var(--card-bg);border:1px solid var(--line);
+  box-shadow:0 10px 24px -18px rgba(0,0,0,.55);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  transition:border-color .2s,background .2s}
 .c-field:focus-within{border-color:var(--input-focus-line);background:var(--input-bg-focus)}
 .c-field textarea{flex:1;min-width:0;resize:none!important;padding:9px 0;background:none;border:0;outline:none;
   max-height:132px;line-height:1.42;font-size:15px;color:var(--ink);font-family:inherit;
@@ -666,16 +674,16 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .send{
   position:relative;width:42px;height:42px;flex:none;border-radius:50%;
   display:grid;place-items:center;color:var(--send-fg);
-  background:var(--send-grad);border:1px solid var(--send-line);
-  box-shadow:var(--send-inset);
+  background:var(--send-grad),var(--card-bg);border:1px solid var(--send-line);
+  box-shadow:var(--send-inset),0 10px 24px -18px rgba(0,0,0,.55);
   transition:transform .16s var(--ease),background .2s,border-color .2s,opacity .2s;
 }
-.send:active{transform:scale(.93);background:var(--send-grad-press);border-color:var(--send-line-press)}
+.send:active{transform:scale(.93);background:var(--send-grad-press),var(--card-bg);border-color:var(--send-line-press)}
 .send .ico{width:21px;height:21px}
 .send.is-mic .ico{width:20px;height:20px}
 .send.is-circle .ico{width:20px;height:20px}
-.send[disabled]{opacity:.4;border-color:var(--send-line);background:var(--send-grad)}
-@media (hover:hover){.send:hover{background:var(--send-grad-press);border-color:var(--send-line-press)}}
+.send[disabled]{opacity:.4;border-color:var(--send-line);background:var(--send-grad),var(--card-bg)}
+@media (hover:hover){.send:hover{background:var(--send-grad-press),var(--card-bg);border-color:var(--send-line-press)}}
 
 /* подписка на канал вместо поля ввода, пока не подписан */
 .ch-sub{display:flex;align-items:center;justify-content:center;

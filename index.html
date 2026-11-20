@@ -34,7 +34,7 @@
 <meta name="twitter:title" content="PAPUZ">
 <meta name="twitter:description" content="Тихий мессенджер для своих">
 <meta name="twitter:image" content="https://papuz.ru/og-image.png">
-<link rel="stylesheet" href="/app.css?v=96">
+<link rel="stylesheet" href="/app.css?v=99">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -341,20 +341,20 @@
             </svg>
           </div>
           <div class="messages" id="messages"></div>
-        </div>
 
-        <div class="typing" id="typing" hidden><span></span><span></span><span></span></div>
+          <div class="typing" id="typing" hidden><span></span><span></span><span></span></div>
 
-        <form class="composer" id="composer">
-          <button type="button" class="c-btn" id="btn-attach" aria-label="Прикрепить" aria-expanded="false"></button>
-          <div class="c-field">
-            <textarea id="msg-input" rows="1" placeholder="Сообщение" maxlength="12000"></textarea>
+          <form class="composer" id="composer">
+            <button type="button" class="c-btn" id="btn-attach" aria-label="Прикрепить" aria-expanded="false"></button>
+            <div class="c-field">
+              <textarea id="msg-input" rows="1" placeholder="Сообщение" maxlength="12000"></textarea>
+            </div>
+            <button class="send" type="submit" id="btn-send" aria-label="Записать голосовое" data-mode="mic"></button>
+          </form>
+
+          <div class="ch-sub" id="ch-sub" hidden>
+            <button class="btn primary ch-sub-btn" id="ch-sub-btn" type="button">Подписаться</button>
           </div>
-          <button class="send" type="submit" id="btn-send" aria-label="Записать голосовое" data-mode="mic"></button>
-        </form>
-
-        <div class="ch-sub" id="ch-sub" hidden>
-          <button class="btn primary ch-sub-btn" id="ch-sub-btn" type="button">Подписаться</button>
         </div>
 
         <div class="attach-menu" id="attach-menu" hidden>
