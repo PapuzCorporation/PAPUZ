@@ -995,6 +995,9 @@ function applyComposerMode(chat) {
 
 async function openChat(chatId) {
   state.activeId = chatId;
+  /* сразу убираем прошлую переписку: пока грузится новая, старые сообщения
+     не должны мигать в ленте */
+  $('#messages').innerHTML = '';
   closeChatMore();
   const chat = state.chats.find((c) => c.id === chatId);
   const peer = state.peers.get(chatId) || chat?.peer || null;
