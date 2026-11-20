@@ -115,6 +115,7 @@
   --mark-ink:#dfffc0;
   --mark-shadow:0 20px 50px -24px rgba(120,240,160,.6);
   --player-bg:linear-gradient(120deg,rgba(22,58,46,.94),rgba(11,26,20,.94));
+  --player-solid:#0b1a14;
   --player-line:rgba(140,240,200,.16);
   --player-shadow:0 18px 40px -32px #000;
   --player-title:#dbffef;
@@ -575,11 +576,13 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .switch[data-busy]{opacity:.55;pointer-events:none}
 
 /* ---- верхний плеер ---- */
-.player{flex:none;display:flex;align-items:center;gap:10px;
+/* плеер висит над лентой, не занимая место в потоке: чат не сдвигается,
+   а обои продолжаются под ним — без отдельной полосы фона */
+.player{position:absolute;top:100%;left:0;right:0;display:flex;align-items:center;gap:10px;
   margin:8px max(12px, calc((100% - 880px) / 2)) 0;padding:7px 8px 7px 10px;border-radius:16px;
-  background:var(--player-bg);
+  background:var(--player-bg);background-color:var(--player-solid,#0b1a14);
   border:1px solid var(--player-line);box-shadow:var(--player-shadow);
-  animation:plIn .28s var(--ease) both;position:relative;z-index:6}
+  animation:plIn .28s var(--ease) both;z-index:6}
 @keyframes plIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 .p-toggle{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;color:var(--btn-ink);
   background:var(--accent-grad-2);transition:transform .15s var(--ease)}
@@ -1570,6 +1573,7 @@ html[data-theme="black"]{
   --active-line:rgba(195,245,109,.16);
 
   --player-bg:linear-gradient(120deg,rgba(14,32,25,.96),rgba(4,10,7,.96));
+  --player-solid:#040e08;
   --player-line:rgba(140,240,200,.14);
   --player-close-bg:rgba(255,255,255,.08);
   --glass-hover:rgba(255,255,255,.08);
@@ -1709,6 +1713,7 @@ html[data-theme="light"]{
   --mark-ink:#1c5a3a;
   --mark-shadow:0 18px 40px -24px rgba(40,150,95,.4);
   --player-bg:linear-gradient(120deg,rgba(226,246,232,.98),rgba(210,240,224,.98));
+  --player-solid:#d2f0e0;
   --player-line:rgba(40,140,95,.22);
   --player-shadow:0 14px 30px -26px rgba(20,60,40,.5);
   --player-title:#16402e;
@@ -1912,6 +1917,7 @@ html[data-theme="copper"]{
   --mark-ink:#ffe2c4;
   --mark-shadow:0 20px 50px -24px rgba(220,130,60,.45);
   --player-bg:linear-gradient(120deg,rgba(52,30,18,.95),rgba(24,14,9,.95));
+  --player-solid:#180e09;
   --player-line:rgba(240,178,122,.18);
   --player-title:#ffe6cc;
   --player-track:rgba(255,235,215,.16);
@@ -2129,6 +2135,7 @@ html[data-theme="neon"]{
   --mark-ink:#f5c0ff;
   --mark-shadow:0 20px 50px -24px rgba(240,120,230,0.6);
   --player-bg:linear-gradient(120deg,rgba(50,25,75,.95),rgba(20,10,30,.95));
+  --player-solid:#140a1e;
   --player-line:rgba(240,140,224,0.16);
   --player-shadow:0 18px 40px -32px #000;
   --player-title:#ffdbfa;
@@ -2374,6 +2381,7 @@ html[data-theme="ocean"]{
   --mark-ink:#c0f6ff;
   --mark-shadow:0 20px 50px -24px rgba(120,205,240,0.6);
   --player-bg:linear-gradient(120deg,rgba(22,45,58,0.94),rgba(11,21,26,0.94));
+  --player-solid:#0b151a;
   --player-line:rgba(140,206,240,0.16);
   --player-shadow:0 18px 40px -32px #000;
   --player-title:#dbf3ff;
@@ -2606,6 +2614,7 @@ html[data-theme="sakura"]{
   --mark-ink:#5a1c34;
   --mark-shadow:0 18px 40px -24px rgba(150,40,83,0.4);
   --player-bg:linear-gradient(120deg,rgba(246,226,234,0.98),rgba(240,210,222,0.98));
+  --player-solid:#f0d2de;
   --player-line:rgba(140,40,79,0.22);
   --player-shadow:0 14px 30px -26px rgba(60,20,36,0.5);
   --player-title:#401626;
@@ -2827,6 +2836,7 @@ html[data-theme="simple"]{
   --mark-ink:#ededed;
   --mark-shadow:0 18px 40px -24px rgba(0,0,0,.65);
   --player-bg:#222222;
+  --player-solid:#222222;
   --player-line:rgba(255,255,255,.13);
   --player-shadow:0 14px 30px -26px rgba(0,0,0,.8);
   --player-title:#f0f0f0;
