@@ -980,17 +980,21 @@ html[data-wall-tone="light"]{
   --wp-grad:
     radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.55), rgba(255,255,255,0) 62%),
     linear-gradient(158deg,#c9c8f5 0%,#c2d9f5 44%,#c6eadf 100%);
-  --wp-line:#fff;
-  --wp-line-opacity:.70;
+  /* на светлом фоне дудлы тёмные, иначе сливаются */
+  --wp-line:#33406a;
+  --wp-line-opacity:.24;
+  --wp-line-width:1.8;
 }
+/* «Тёмная» — нейтральная, без зелёного оттенка */
 html[data-wall-tone="dark"]{
   --wp-grad:
-    radial-gradient(120% 90% at 14% 0%, rgba(80,170,125,.17), rgba(0,0,0,0) 62%),
-    radial-gradient(90% 70% at 92% 100%, rgba(60,130,190,.11), rgba(0,0,0,0) 66%),
-    linear-gradient(160deg,#0d1613 0%,#080e0c 55%,#060908 100%);
-  --wp-line:#d9f5e6;
-  --wp-line-opacity:.18;
+    radial-gradient(120% 90% at 14% 0%, rgba(170,185,210,.10), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(120,140,180,.08), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#191c22 0%,#111318 55%,#0a0b0e 100%);
+  --wp-line:#e2e9f4;
+  --wp-line-opacity:.17;
 }
+/* «Как тема» — цвета выбранной темы */
 html[data-wall-tone="theme"]{
   --wp-grad:
     radial-gradient(120% 90% at 14% 0%, rgba(80,170,125,.17), rgba(0,0,0,0) 62%),
@@ -999,20 +1003,70 @@ html[data-wall-tone="theme"]{
   --wp-line:#d9f5e6;
   --wp-line-opacity:.18;
 }
-html[data-wall-tone="theme"][data-theme="light"],
+html[data-wall-tone="theme"][data-theme="black"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(255,255,255,.055), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(255,255,255,.035), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#161616 0%,#0d0d0d 55%,#060606 100%);
+  --wp-line:#ededed;
+  --wp-line-opacity:.15;
+}
+html[data-wall-tone="theme"][data-theme="light"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.75), rgba(255,255,255,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(120,200,150,.16), rgba(120,200,150,0) 66%),
+    linear-gradient(158deg,#e9f3e3 0%,#dcebd9 48%,#cfe3d3 100%);
+  --wp-line:#2a563d;
+  --wp-line-opacity:.20;
+  --wp-line-width:1.8;
+}
+html[data-wall-tone="theme"][data-theme="copper"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(240,178,122,.15), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(190,110,70,.10), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#1b120c 0%,#120b07 55%,#0a0503 100%);
+  --wp-line:#f7e2c8;
+  --wp-line-opacity:.19;
+}
+html[data-wall-tone="theme"][data-theme="neon"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(219,109,245,.16), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(220,79,196,.11), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#171021 0%,#0e0916 55%,#07040d 100%);
+  --wp-line:#f3d8f8;
+  --wp-line-opacity:.17;
+}
+html[data-wall-tone="theme"][data-theme="ocean"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(109,229,245,.15), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(79,171,220,.12), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#0b1c28 0%,#06121b 55%,#030a10 100%);
+  --wp-line:#d8f4ff;
+  --wp-line-opacity:.17;
+}
 html[data-wall-tone="theme"][data-theme="sakura"]{
   --wp-grad:
-    radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.55), rgba(255,255,255,0) 62%),
-    linear-gradient(158deg,#c9c8f5 0%,#c2d9f5 44%,#c6eadf 100%);
-  --wp-line:#fff;
-  --wp-line-opacity:.70;
+    radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.75), rgba(255,255,255,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(230,150,180,.16), rgba(230,150,180,0) 66%),
+    linear-gradient(158deg,#fdf1f6 0%,#f7e4ec 48%,#f1d8e3 100%);
+  --wp-line:#4f1c30;
+  --wp-line-opacity:.28;
+  --wp-line-width:1.8;
+}
+html[data-wall-tone="theme"][data-theme="simple"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(255,255,255,.05), rgba(0,0,0,0) 62%),
+    linear-gradient(160deg,#1c1c1c 0%,#141414 55%,#0d0d0d 100%);
+  --wp-line:#e8e8e8;
+  --wp-line-opacity:.14;
 }
 html[data-wall-tone="colorful"]{
   --wp-grad:
     radial-gradient(100% 70% at 16% 0%, rgba(255,255,255,.28), rgba(255,255,255,0) 60%),
     linear-gradient(150deg,#b7d9f2 0%,#c9c3f2 30%,#e6b9e8 55%,#ffc9c4 78%,#ffe2b8 100%);
-  --wp-line:#fff;
-  --wp-line-opacity:.68;
+  --wp-line:#54344c;
+  --wp-line-opacity:.23;
+  --wp-line-width:1.8;
 }
 
 /* плотные цвета плашек: те же, что тема даёт на своём фоне */
@@ -1084,7 +1138,7 @@ html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
   border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.25);
 }
 [data-tone-dot="light"]{background:linear-gradient(135deg,#c9c8f5,#c2d9f5 50%,#c6eadf)}
-[data-tone-dot="dark"]{background:linear-gradient(135deg,#16241d,#050807)}
+[data-tone-dot="dark"]{background:linear-gradient(135deg,#2a2e35,#0b0c0f)}
 [data-tone-dot="theme"]{background:linear-gradient(135deg,var(--bg) 0 45%,var(--lime) 45% 72%,var(--mint) 72%)}
 [data-tone-dot="colorful"]{background:conic-gradient(from 210deg,#b7d9f2,#c9c3f2,#e6b9e8,#ffc9c4,#ffe2b8,#b7d9f2)}
 
@@ -1101,7 +1155,8 @@ html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
 .wall-prev{
   position:relative;display:block;height:96px;border-radius:11px;overflow:hidden;
   border:1px solid var(--line);background:var(--wp-grad);
-  --wp-line-opacity:.95;--wp-line-width:2.6;
+  /* линии как в чате: та же прозрачность тона, только чуть толще для читаемости */
+  --wp-line-width:2.6;
 }
 .wall-prev svg{position:absolute;inset:0;display:block;width:100%;height:100%}
 .wall-card.is-active .wall-prev::after{
