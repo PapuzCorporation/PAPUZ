@@ -11,5 +11,15 @@
     };
     var m = document.querySelector('meta[name="theme-color"]');
     if (m) m.setAttribute('content', c[t]);
+
+    var patterns = ['dots', 'waves', 'grid', 'diag', 'rings', 'plaid', 'zigzag', 'aurora'];
+    var wp = localStorage.getItem('papuz-wallpaper') || 'none';
+    if (wp !== 'none' && patterns.indexOf(wp) < 0) wp = 'none';
+    if (wp !== 'none') document.documentElement.dataset.wallpaper = wp;
+
+    var tones = ['light', 'dark', 'theme', 'colorful'];
+    var wt = localStorage.getItem('papuz-wall-tone') || 'theme';
+    if (tones.indexOf(wt) < 0) wt = 'theme';
+    document.documentElement.dataset.wallTone = wt;
   } catch (e) { /* приватный режим */ }
 })();

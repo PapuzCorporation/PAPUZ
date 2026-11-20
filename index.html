@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" content="#05080a">
-<script src="/theme-init.js?v=7"></script>
+<script src="/theme-init.js?v=8"></script>
 <title>PAPUZ</title>
 <meta name="description" content="Тихий мессенджер для своих">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -34,7 +34,7 @@
 <meta name="twitter:title" content="PAPUZ">
 <meta name="twitter:description" content="Тихий мессенджер для своих">
 <meta name="twitter:image" content="https://papuz.ru/og-image.png">
-<link rel="stylesheet" href="/app.css?v=84">
+<link rel="stylesheet" href="/app.css?v=86">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -576,6 +576,72 @@
               <span class="theme-name">Пепел</span>
             </button>
           </div>
+
+          <div class="wall-section">
+            <div class="wall-head">
+              <div>
+                <h3 class="wall-title">Обои чата</h3>
+                <p class="wall-sub" id="wall-status" aria-live="polite">Без обоев</p>
+              </div>
+              <button class="wall-off" type="button" id="wall-off" hidden>Убрать</button>
+            </div>
+
+            <div class="wall-tones" id="wall-tones" role="group" aria-label="Тон обоев">
+              <button class="wall-tone" type="button" data-wall-tone="light">
+                <span class="wall-tone-dot" data-tone-dot="light"></span>
+                <span>Светлая</span>
+              </button>
+              <button class="wall-tone" type="button" data-wall-tone="dark">
+                <span class="wall-tone-dot" data-tone-dot="dark"></span>
+                <span>Тёмная</span>
+              </button>
+              <button class="wall-tone" type="button" data-wall-tone="theme">
+                <span class="wall-tone-dot" data-tone-dot="theme"></span>
+                <span>Как тема</span>
+              </button>
+              <button class="wall-tone" type="button" data-wall-tone="colorful">
+                <span class="wall-tone-dot" data-tone-dot="colorful"></span>
+                <span>Разноцветная</span>
+              </button>
+            </div>
+
+            <div class="wall-grid" id="wall-grid" role="group" aria-label="Узор обоев">
+              <button class="wall-card" type="button" data-wall-set="dots" aria-label="Точки">
+                <span class="wall-prev" data-wall-pattern="dots"><i></i><i></i></span>
+                <span class="wall-name">Точки</span>
+              </button>
+              <button class="wall-card" type="button" data-wall-set="waves" aria-label="Волны">
+                <span class="wall-prev" data-wall-pattern="waves"><i></i><i></i></span>
+                <span class="wall-name">Волны</span>
+              </button>
+              <button class="wall-card" type="button" data-wall-set="grid" aria-label="Сетка">
+                <span class="wall-prev" data-wall-pattern="grid"><i></i><i></i></span>
+                <span class="wall-name">Сетка</span>
+              </button>
+              <button class="wall-card" type="button" data-wall-set="diag" aria-label="Ленты">
+                <span class="wall-prev" data-wall-pattern="diag"><i></i><i></i></span>
+                <span class="wall-name">Ленты</span>
+              </button>
+              <button class="wall-card" type="button" data-wall-set="rings" aria-label="Круги">
+                <span class="wall-prev" data-wall-pattern="rings"><i></i><i></i></span>
+                <span class="wall-name">Круги</span>
+              </button>
+              <button class="wall-card" type="button" data-wall-set="plaid" aria-label="Клетка">
+                <span class="wall-prev" data-wall-pattern="plaid"><i></i><i></i></span>
+                <span class="wall-name">Клетка</span>
+              </button>
+              <button class="wall-card" type="button" data-wall-set="zigzag" aria-label="Зигзаг">
+                <span class="wall-prev" data-wall-pattern="zigzag"><i></i><i></i></span>
+                <span class="wall-name">Зигзаг</span>
+              </button>
+              <button class="wall-card" type="button" data-wall-set="aurora" aria-label="Сияние">
+                <span class="wall-prev" data-wall-pattern="aurora"><i></i><i></i></span>
+                <span class="wall-name">Сияние</span>
+              </button>
+            </div>
+
+            <p class="wall-hint" id="wall-hint">Выбери узор — обои появятся в переписке.</p>
+          </div>
         </div>
       </section>
 
@@ -767,6 +833,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/twemoji.min.js"></script>
-<script src="/app.js?v=101" type="module"></script>
+<script src="/app.js?v=103" type="module"></script>
 </body>
 </html>

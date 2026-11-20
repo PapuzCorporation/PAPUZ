@@ -294,6 +294,115 @@ paintTheme(THEMES.includes(document.documentElement.dataset.theme)
   : 'dark');
 applySnow();
 
+/* -------------------------------------------------------------- обои */
+
+const WALL_KEY = 'papuz-wallpaper';
+const WALL_TONE_KEY = 'papuz-wall-tone';
+const WALLPAPERS = ['dots', 'waves', 'grid', 'diag', 'rings', 'plaid', 'zigzag', 'aurora'];
+const WALL_TONES = ['light', 'dark', 'theme', 'colorful'];
+const WALL_NAMES = {
+  dots: 'Точки', waves: 'Волны', grid: 'Сетка', diag: 'Ленты',
+  rings: 'Круги', plaid: 'Клетка', zigzag: 'Зигзаг', aurora: 'Сияние',
+};
+const WALL_TONE_NAMES = {
+  light: 'Светлая', dark: 'Тёмная', theme: 'Как тема', colorful: 'Разноцветная',
+};
+
+let wallPattern = 'none';
+let wallTone = 'theme';
+let lastWallPattern = 'dots';
+
+function readWallpaper() {
+  let pattern = 'none';
+  let tone = 'theme';
+  try {
+    const p = localStorage.getItem(WALL_KEY);
+    const t = localStorage.getItem(WALL_TONE_KEY);
+    if (p === 'none' || WALLPAPERS.includes(p)) pattern = p || 'none';
+    if (WALL_TONES.includes(t)) tone = t;
+  } catch { /* приватный режим */ }
+  return { pattern, tone };
+}
+
+function paintWallpaper() {
+  const html = document.documentElement;
+  if (wallPattern === 'none') delete html.dataset.wallpaper;
+  else html.dataset.wallpaper = wallPattern;
+  html.dataset.wallTone = wallTone;
+
+  for (const btn of $$('[data-wall-set]')) {
+    const on = wallPattern !== 'none' && btn.dataset.wallSet === wallPattern;
+    btn.classList.toggle('is-active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  for (const btn of $$('.wall-tone[data-wall-tone]')) {
+    const on = btn.dataset.wallTone === wallTone;
+    btn.classList.toggle('is-active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  const off = $('#wall-off');
+  if (off) off.hidden = wallPattern === 'none';
+  const status = $('#wall-status');
+  if (status) {
+    status.textContent = wallPattern === 'none'
+      ? 'Без обоев'
+      : `${WALL_NAMES[wallPattern] || 'Узор'} · ${WALL_TONE_NAMES[wallTone] || ''}`;
+  }
+  const hint = $('#wall-hint');
+  if (hint) {
+    hint.textContent = wallPattern === 'none'
+      ? 'Выбери узор — обои появятся в переписке.'
+      : 'Обои запоминаются на этом устройстве.';
+  }
+}
+
+function applyWallpaper(pattern, tone = wallTone, persist = true) {
+  if (pattern !== 'none' && !WALLPAPERS.includes(pattern)) pattern = 'none';
+  if (!WALL_TONES.includes(tone)) tone = 'theme';
+  if (pattern !== 'none') lastWallPattern = pattern;
+  wallPattern = pattern;
+  wallTone = tone;
+  if (persist) {
+    try {
+      localStorage.setItem(WALL_KEY, pattern);
+      localStorage.setItem(WALL_TONE_KEY, tone);
+    } catch { /* приватный режим */ }
+  }
+  paintWallpaper();
+}
+
+{
+  const saved = readWallpaper();
+  wallPattern = saved.pattern;
+  wallTone = saved.tone;
+  if (wallPattern !== 'none') lastWallPattern = wallPattern;
+  paintWallpaper();
+}
+
+$$('[data-wall-set]').forEach((btn) => {
+  btn.addEventListener('click', () => applyWallpaper(btn.dataset.wallSet));
+});
+
+$$('.wall-tone[data-wall-tone]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const pattern = wallPattern === 'none' ? lastWallPattern : wallPattern;
+    applyWallpaper(pattern, btn.dataset.wallTone);
+  });
+});
+
+const wallOff = $('#wall-off');
+if (wallOff) wallOff.addEventListener('click', () => applyWallpaper('none'));
+
+/* обои поменяли в другой вкладке — подхватываем */
+window.addEventListener('storage', (e) => {
+  if (e.key !== WALL_KEY && e.key !== WALL_TONE_KEY) return;
+  const saved = readWallpaper();
+  wallPattern = saved.pattern;
+  wallTone = saved.tone;
+  if (wallPattern !== 'none') lastWallPattern = wallPattern;
+  paintWallpaper();
+});
+
 /* --------------------------------------------------------------- ключи */
 
 const STORE = (id) => `papuz.priv.${id}`;
