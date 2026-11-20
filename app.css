@@ -1153,12 +1153,18 @@ html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
 .wall-card.is-active{border-color:var(--accent-line);
   box-shadow:0 0 0 1px var(--accent-line),0 10px 22px -20px rgba(0,0,0,.8)}
 .wall-prev{
-  position:relative;display:block;height:96px;border-radius:11px;overflow:hidden;
+  position:relative;display:block;aspect-ratio:300/158;border-radius:11px;overflow:hidden;
   border:1px solid var(--line);background:var(--wp-grad);
-  /* линии как в чате: та же прозрачность тона, только чуть толще для читаемости */
-  --wp-line-width:2.6;
 }
-.wall-prev svg{position:absolute;inset:0;display:block;width:100%;height:100%}
+/* узор — заранее нарисованная маска: не перерисовывается при каждом открытии
+   и выглядит одинаково на любом экране */
+.wall-prev::before{
+  content:"";position:absolute;inset:0;
+  background:var(--wp-line);opacity:var(--wp-line-opacity);
+  -webkit-mask-image:var(--wp-mask);mask-image:var(--wp-mask);
+  -webkit-mask-size:100% 100%;mask-size:100% 100%;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+}
 .wall-card.is-active .wall-prev::after{
   content:"✓";position:absolute;right:6px;top:6px;z-index:2;
   width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
