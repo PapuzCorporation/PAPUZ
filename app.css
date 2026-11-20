@@ -36,11 +36,6 @@
   --grain-opacity:.05;
   --brand-grad:linear-gradient(180deg,#f7ffe9 0%,#cdf593 55%,#5fe0b0 100%);
   --wordmark-grad:linear-gradient(180deg,#f2ffe0,#8fe6b8);
-  /* композер и кнопки над обоями: тёмное стекло темы, а не фон картинки */
-  --glass-bg:rgba(5,12,9,.78);
-  --glass-bg-focus:rgba(4,10,8,.88);
-  --glass-blur:blur(16px) saturate(1.08);
-  --glass-muted:var(--muted);
 
   /* карточки и поля */
   --card-bg:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.022));
@@ -680,7 +675,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;-webkit-appearance:none;appearance:none}
 .c-field textarea::-webkit-resizer{display:none;width:0;height:0;background:none}
 .c-field textarea::-webkit-scrollbar{width:0;height:0;display:none}
-.c-field textarea::placeholder{color:var(--glass-muted,var(--muted-2))}
+.c-field textarea::placeholder{color:var(--muted-2)}
 .send{
   position:relative;width:42px;height:42px;flex:none;border-radius:50%;
   display:grid;place-items:center;color:var(--send-fg);
@@ -1602,10 +1597,6 @@ html[data-theme="black"]{
   --ghost-bg:rgba(255,255,255,.035);
 
   --shell-grad:linear-gradient(180deg,#050505 0%,#000 55%,#000 100%);
-  --glass-bg:rgba(0,0,0,.78);
-  --glass-bg-focus:rgba(0,0,0,.90);
-  --glass-blur:blur(16px) saturate(1.02);
-  --glass-muted:var(--muted);
   --side-grad:linear-gradient(180deg,rgba(255,255,255,.022),rgba(255,255,255,.006));
   --chat-grad:linear-gradient(180deg,rgba(255,255,255,.012),rgba(0,0,0,.25));
   --chat-mobile-bg:#000;
@@ -1908,10 +1899,6 @@ html[data-theme="copper"]{
   --glow-opacity:.55;
   --brand-grad:linear-gradient(180deg,#fff4e6 0%,#f3c99a 55%,#c87a42 100%);
   --wordmark-grad:linear-gradient(180deg,#fff0df,#e0a877);
-  --glass-bg:rgba(17,10,6,.78);
-  --glass-bg-focus:rgba(14,8,5,.88);
-  --glass-blur:blur(16px) saturate(1.08);
-  --glass-muted:var(--muted);
 
   --card-bg:linear-gradient(180deg,rgba(255,235,215,.06),rgba(255,235,215,.02));
   --tabs-bg:rgba(0,0,0,.26);
@@ -2115,10 +2102,6 @@ html[data-theme="neon"]{
   --glow-opacity:.5;
   --grain-opacity:.05;
   --brand-grad:linear-gradient(180deg,#fbe9ff 0%,#e393f5 55%,#e05fca 100%);
-  --glass-bg:rgba(11,6,18,.78);
-  --glass-bg-focus:rgba(9,5,15,.88);
-  --glass-blur:blur(16px) saturate(1.1);
-  --glass-muted:var(--muted);
   --wordmark-grad:linear-gradient(180deg,#f9e0ff,#e68fdb);
 
   /* карточки и поля */
@@ -2365,10 +2348,6 @@ html[data-theme="ocean"]{
   --glow-opacity:.5;
   --grain-opacity:.05;
   --brand-grad:linear-gradient(180deg,#e9fcff 0%,#93e9f5 55%,#5fb4e0 100%);
-  --glass-bg:rgba(3,10,16,.78);
-  --glass-bg-focus:rgba(2,8,13,.88);
-  --glass-blur:blur(16px) saturate(1.08);
-  --glass-muted:var(--muted);
   --wordmark-grad:linear-gradient(180deg,#e0fbff,#8fcae6);
 
   /* карточки и поля */
@@ -2834,10 +2813,6 @@ html[data-theme="simple"]{
   --glow-opacity:0;
   --grain-opacity:0;
   --brand-grad:#f0f0f0;
-  --glass-bg:rgba(14,14,14,.80);
-  --glass-bg-focus:rgba(10,10,10,.90);
-  --glass-blur:blur(16px) saturate(1.02);
-  --glass-muted:var(--muted);
   --wordmark-grad:#f0f0f0;
 
   /* карточки и поля */
