@@ -993,6 +993,42 @@ function applyComposerMode(chat) {
   else $('#msg-input').placeholder = 'Сообщение…';
 }
 
+/* «печатает…»: точки занимают своё место над композером, а не поверх сообщения */
+function setTyping(on) {
+  const el = $('#typing');
+  const list = $('#messages');
+  const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+  el.hidden = !on;
+  el.classList.toggle('on', on);
+  $('#chat-body').classList.toggle('typing-on', on);
+  if (on && nearBottom) requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
+}
+
+/* высота нижней панели: лента прокручивается под композером, а не над ним */
+{
+  const chatBody = $('#chat-body');
+  const list = $('#messages');
+  const bars = [$('#composer'), $('#ch-sub')].filter(Boolean);
+  let raf = 0;
+  const measure = () => {
+    const bar = bars.find((el) => !el.hidden);
+    const h = bar ? Math.round(bar.getBoundingClientRect().height) : 0;
+    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 48;
+    chatBody.style.setProperty('--composer-h', h + 'px');
+    if (atBottom) {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
+    }
+  };
+  const ro = new ResizeObserver(measure);
+  const mo = new MutationObserver(measure);
+  for (const el of bars) {
+    ro.observe(el);
+    mo.observe(el, { attributes: true, attributeFilter: ['hidden'] });
+  }
+  measure();
+}
+
 async function openChat(chatId) {
   state.activeId = chatId;
   /* сразу убираем прошлую переписку: пока грузится новая, старые сообщения
@@ -1008,8 +1044,7 @@ async function openChat(chatId) {
   $('.shell').classList.add('chat-open');
   /* при переходе в другой чат старый «печатает…» не должен висеть */
   clearTimeout(state.typingTimers.get('show'));
-  $('#typing').classList.remove('on');
-  $('#typing').hidden = true;
+  setTyping(false);
 
   if (isGroup) {
     groupAvatar($('#peer-avatar'), chat, 'av-sm');
@@ -4299,14 +4334,9 @@ function connectWs() {
 
     if (msg.type === 'typing' && msg.chatId === state.activeId && msg.userId !== state.me.id
         && state.chats.find((c) => c.id === msg.chatId)?.type !== 'channel') {
-      const el = $('#typing');
-      el.hidden = false;
-      el.classList.add('on');
+      setTyping(true);
       clearTimeout(state.typingTimers.get('show'));
-      state.typingTimers.set('show', setTimeout(() => {
-        el.classList.remove('on');
-        el.hidden = true;
-      }, 2600));
+      state.typingTimers.set('show', () => setTyping(false), 2600);
     }
   });
 
