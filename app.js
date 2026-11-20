@@ -1267,10 +1267,13 @@ function icon(name, cls = '') {
 }
 
 function setIcon(btn, name) {
+  if (btn.dataset.icon === name) return;
+  btn.dataset.icon = name;
   btn.replaceChildren(icon(name));
 }
 
 function setBusy(btn) {
+  delete btn.dataset.icon;
   btn.replaceChildren();
   btn.classList.add('busy');
 }
@@ -1435,9 +1438,9 @@ function audioEl() {
   a.preload = 'auto';
   a.addEventListener('timeupdate', () => syncPlayer());
   a.addEventListener('durationchange', () => syncPlayer());
-  a.addEventListener('play', () => syncPlayer());
-  a.addEventListener('pause', () => syncPlayer());
-  a.addEventListener('ended', () => { if (!player.circle) stopPlayer(); });
+  a.addEventListener('play', () => { syncPlayer(); startPlayerLoop(); });
+  a.addEventListener('pause', () => { stopPlayerLoop(); syncPlayer(); });
+  a.addEventListener('ended', () => { stopPlayerLoop(); if (!player.circle) stopPlayer(); });
   player.audio = a;
   return a;
 }
@@ -1469,6 +1472,24 @@ function playerTime() {
   return null;
 }
 
+/* timeupdate приходит всего несколько раз в секунду — пока играет,
+   двигаем прогресс каждый кадр, чтобы полоска не дёргалась */
+let playerRaf = 0;
+function playerLoop() {
+  playerRaf = 0;
+  const st = playerTime();
+  if (!st || st.paused) return;
+  syncPlayer();
+  playerRaf = requestAnimationFrame(playerLoop);
+}
+function startPlayerLoop() {
+  if (!playerRaf) playerRaf = requestAnimationFrame(playerLoop);
+}
+function stopPlayerLoop() {
+  if (playerRaf) cancelAnimationFrame(playerRaf);
+  playerRaf = 0;
+}
+
 function syncPlayer() {
   const st = playerTime();
   if (!st) return;
@@ -1492,6 +1513,7 @@ function toggleCurrent() {
 }
 
 function stopPlayer() {
+  stopPlayerLoop();
   const hooks = player.hooks;
   const c = player.circle;
   if (c) {
@@ -1536,6 +1558,7 @@ async function playAudio({ chatId, media, title, sub, message, hooks }) {
   $('#player').hidden = false;
   a.play().catch(() => {});
   syncPlayer();
+  startPlayerLoop();
 }
 
 function playCircle({ chatId, media, box, v, prog }) {
@@ -1561,6 +1584,7 @@ function playCircle({ chatId, media, box, v, prog }) {
   $('#player').hidden = false;
   v.play().catch(() => {});
   syncPlayer();
+  startPlayerLoop();
 }
 
 /* ---- верхняя плашка ---- */
@@ -1757,10 +1781,19 @@ function circleNode(chatId, media, msg) {
   tap.addEventListener('click', () => playCircle({ chatId, media, box, v, prog }));
   v.addEventListener('click', () => playCircle({ chatId, media, box, v, prog }));
   v.addEventListener('timeupdate', () => { if (player.circle?.v === v) syncPlayer(); });
-  v.addEventListener('play', () => { if (player.circle?.v === v) syncPlayer(); });
-  v.addEventListener('pause', () => { if (player.circle?.v === v) syncPlayer(); });
+  v.addEventListener('play', () => {
+    if (player.circle?.v !== v) return;
+    syncPlayer();
+    startPlayerLoop();
+  });
+  v.addEventListener('pause', () => {
+    if (player.circle?.v !== v) return;
+    stopPlayerLoop();
+    syncPlayer();
+  });
   v.addEventListener('ended', () => {
     if (player.circle?.v !== v) return;
+    stopPlayerLoop();
     player.circle = null;
     player.hooks = null;
     $('#player').hidden = true;
@@ -1801,14 +1834,18 @@ function voiceNode(chatId, media, msg) {
 
   const wave = document.createElement('div');
   wave.className = 'a-wave';
+  const base = document.createElement('div');
+  base.className = 'a-wave-bars';
   const seed = (media.id * 2654435761) % 97;
-  const bars = [];
   for (let i = 0; i < 30; i++) {
     const bar = document.createElement('i');
     bar.style.height = `${4 + ((seed + i * 37) % 15)}px`;
-    wave.append(bar);
-    bars.push(bar);
+    base.append(bar);
   }
+  const fill = document.createElement('div');
+  fill.className = 'a-wave-fill';
+  fill.append(base.cloneNode(true));
+  wave.append(base, fill);
 
   const meta = document.createElement('div');
   meta.className = 'a-meta';
@@ -1821,8 +1858,10 @@ function voiceNode(chatId, media, msg) {
   row.append(btn, body);
 
   const paint = (p) => {
-    const n = Math.round(bars.length * p);
-    bars.forEach((b, i) => { b.classList.toggle('on', i < n); });
+    const cut = `${Math.max(0, Math.min(1, p)) * 100}%`;
+    const clip = `inset(0 calc(100% - ${cut}) 0 0)`;
+    fill.style.clipPath = clip;
+    fill.style.webkitClipPath = clip;
   };
 
   const hooks = {
@@ -1831,7 +1870,8 @@ function voiceNode(chatId, media, msg) {
       row.classList.remove('busy');
       row.classList.add('active');
       paint(d ? Math.min(1, cur / d) : 0);
-      time.textContent = `${M.clock(cur)} · ${M.clock(d)}`;
+      const label = `${M.clock(cur)} · ${M.clock(d)}`;
+      if (time.textContent !== label) time.textContent = label;
       setIcon(btn, paused ? 'play' : 'pause');
     },
     reset: () => {
