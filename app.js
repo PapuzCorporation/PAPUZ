@@ -222,7 +222,7 @@ const THEME_COLORS = {
 };
 const THEME_NAMES = {
   dark: 'Тёмная', black: 'Глубокий чёрный', light: 'Белая', copper: 'Медь',
-  neon: 'Неон', ocean: 'Океан', sakura: 'Сакура', simple: 'Простая',
+  neon: 'Неон', ocean: 'Океан', sakura: 'Сакура', simple: 'Пепел',
 };
 const THEMES = Object.keys(THEME_COLORS);
 
