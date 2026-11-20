@@ -298,11 +298,16 @@ applySnow();
 
 const WALL_KEY = 'papuz-wallpaper';
 const WALL_TONE_KEY = 'papuz-wall-tone';
-const WALLPAPERS = ['dots', 'waves', 'grid', 'diag', 'rings', 'plaid', 'zigzag', 'aurora'];
+const WALLPAPERS = ['cosmos', 'games', 'nature', 'music', 'food', 'animals', 'travel', 'party'];
 const WALL_TONES = ['light', 'dark', 'theme', 'colorful'];
 const WALL_NAMES = {
-  dots: 'Точки', waves: 'Волны', grid: 'Сетка', diag: 'Ленты',
-  rings: 'Круги', plaid: 'Клетка', zigzag: 'Зигзаг', aurora: 'Сияние',
+  cosmos: 'Космос', games: 'Игры', nature: 'Природа', music: 'Музыка',
+  food: 'Еда', animals: 'Звери', travel: 'Поездки', party: 'Праздник',
+};
+/* старые узоры из первой версии — мягко переводим на новые */
+const WALL_LEGACY = {
+  dots: 'cosmos', waves: 'nature', grid: 'games', diag: 'music',
+  rings: 'food', plaid: 'travel', zigzag: 'party', aurora: 'cosmos',
 };
 const WALL_TONE_NAMES = {
   light: 'Светлая', dark: 'Тёмная', theme: 'Как тема', colorful: 'Разноцветная',
@@ -310,14 +315,15 @@ const WALL_TONE_NAMES = {
 
 let wallPattern = 'none';
 let wallTone = 'theme';
-let lastWallPattern = 'dots';
+let lastWallPattern = 'cosmos';
 
 function readWallpaper() {
   let pattern = 'none';
   let tone = 'theme';
   try {
-    const p = localStorage.getItem(WALL_KEY);
+    let p = localStorage.getItem(WALL_KEY);
     const t = localStorage.getItem(WALL_TONE_KEY);
+    if (WALL_LEGACY[p]) p = WALL_LEGACY[p];
     if (p === 'none' || WALLPAPERS.includes(p)) pattern = p || 'none';
     if (WALL_TONES.includes(t)) tone = t;
   } catch { /* приватный режим */ }
@@ -352,7 +358,7 @@ function paintWallpaper() {
   if (hint) {
     hint.textContent = wallPattern === 'none'
       ? 'Выбери узор — обои появятся в переписке.'
-      : 'Обои запоминаются на этом устройстве.';
+      : 'Обои меняют только фон чата. Пузыри и текст остаются как в теме.';
   }
 }
 

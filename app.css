@@ -973,77 +973,86 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 }
 
 /* --------------------------------------------------------- обои */
-/* тона: цвета узора и подложки. «Как тема» берёт переменные темы,
-   поэтому обои перекрашиваются вместе с ней без перерисовки. */
+/* Обои — это только фон переписки. Пузыри и служебные плашки
+   не перекрашиваются: при включённых обоях они становятся плотными
+   и сохраняют цвет темы, как в Telegram. */
 html[data-wall-tone="light"]{
-  --wp-bg:#f2f0e6;
-  --wp-glow:radial-gradient(120% 85% at 18% 0%,#fffdf7 0%,rgba(255,253,247,0) 62%);
-  --wp-ink:rgba(46,72,56,.17);
-  --wp-ink-2:rgba(46,72,56,.09);
-  --wp-accent:rgba(120,164,112,.18);
-  --wp-accent-2:rgba(206,170,112,.16);
-  --wp-prev-them:rgba(255,255,255,.94);
-  --wp-prev-mine:#bfe8cf;
-  --wp-prev-line:rgba(30,70,50,.12);
+  --wp-grad:
+    radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.55), rgba(255,255,255,0) 62%),
+    linear-gradient(158deg,#c9c8f5 0%,#c2d9f5 44%,#c6eadf 100%);
+  --wp-line:#fff;
+  --wp-line-opacity:.70;
 }
 html[data-wall-tone="dark"]{
-  --wp-bg:#080d0b;
-  --wp-glow:radial-gradient(120% 85% at 18% 0%,rgba(70,140,105,.16) 0%,rgba(70,140,105,0) 62%);
-  --wp-ink:rgba(198,236,214,.11);
-  --wp-ink-2:rgba(198,236,214,.06);
-  --wp-accent:rgba(120,220,170,.13);
-  --wp-accent-2:rgba(120,180,240,.11);
-  --wp-prev-them:rgba(255,255,255,.16);
-  --wp-prev-mine:#1d6a53;
-  --wp-prev-line:rgba(255,255,255,.11);
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(80,170,125,.17), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(60,130,190,.11), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#0d1613 0%,#080e0c 55%,#060908 100%);
+  --wp-line:#d9f5e6;
+  --wp-line-opacity:.18;
 }
 html[data-wall-tone="theme"]{
-  --wp-bg:var(--bg);
-  --wp-glow:radial-gradient(120% 85% at 18% 0%,var(--accent-soft) 0%,rgba(0,0,0,0) 62%);
-  --wp-ink:var(--line-strong);
-  --wp-ink-2:var(--line);
-  --wp-accent:var(--accent-soft-line);
-  --wp-accent-2:var(--accent-soft);
-  --wp-prev-them:var(--them-bg);
-  --wp-prev-mine:var(--mine-bg);
-  --wp-prev-line:var(--them-line);
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(80,170,125,.17), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(60,130,190,.11), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#0d1613 0%,#080e0c 55%,#060908 100%);
+  --wp-line:#d9f5e6;
+  --wp-line-opacity:.18;
+}
+html[data-wall-tone="theme"][data-theme="light"],
+html[data-wall-tone="theme"][data-theme="sakura"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.55), rgba(255,255,255,0) 62%),
+    linear-gradient(158deg,#c9c8f5 0%,#c2d9f5 44%,#c6eadf 100%);
+  --wp-line:#fff;
+  --wp-line-opacity:.70;
 }
 html[data-wall-tone="colorful"]{
-  --wp-bg:#160b28;
-  --wp-glow:linear-gradient(145deg,
-    rgba(255,86,150,.42) 0%,rgba(168,92,255,.34) 26%,rgba(86,160,255,.32) 50%,
-    rgba(72,220,190,.24) 72%,rgba(255,184,80,.30) 100%);
-  --wp-ink:rgba(255,255,255,.15);
-  --wp-ink-2:rgba(255,255,255,.08);
-  --wp-accent:rgba(255,255,255,.20);
-  --wp-accent-2:rgba(255,220,250,.16);
-  --wp-prev-them:rgba(255,255,255,.20);
-  --wp-prev-mine:#2b6a58;
-  --wp-prev-line:rgba(255,255,255,.14);
+  --wp-grad:
+    radial-gradient(100% 70% at 16% 0%, rgba(255,255,255,.28), rgba(255,255,255,0) 60%),
+    linear-gradient(150deg,#b7d9f2 0%,#c9c3f2 30%,#e6b9e8 55%,#ffc9c4 78%,#ffe2b8 100%);
+  --wp-line:#fff;
+  --wp-line-opacity:.68;
 }
 
-/* светлые обои: входящие пузыри становятся плотными и тёмными по тексту,
-   иначе светлый текст тёмной темы терялся бы на светлом фоне */
-html[data-wallpaper][data-wall-tone="light"] .messages{
-  --them-bg:linear-gradient(180deg,rgba(255,255,255,.95),rgba(252,253,250,.91));
-  --them-ink:#1a2a21;
-  --them-line:rgba(20,60,40,.10);
-  --them-shadow:0 10px 26px -22px rgba(30,60,45,.35);
-  --day-bg:rgba(255,255,255,.66);
-  --muted-2:#536a5d;
-  --line:rgba(20,60,40,.12);
-  --system-bg:rgba(255,255,255,.58);
-  --sender:#2f7a58;
-  --scroll-thumb:rgba(20,60,40,.18);
+/* плотные цвета плашек: те же, что тема даёт на своём фоне */
+:root{--them-solid:#161a1b;--day-solid:#060908;--system-solid:#060908}
+html[data-theme="black"]{--them-solid:#0d0d0d;--day-solid:#0b0b0b;--system-solid:#0b0b0b}
+html[data-theme="copper"]{--them-solid:#1d1711;--day-solid:#0a0604;--system-solid:#0a0604}
+html[data-theme="neon"]{--them-solid:#17151e;--day-solid:#050409;--system-solid:#050409}
+html[data-theme="ocean"]{--them-solid:#141b21;--day-solid:#03080d;--system-solid:#03080d}
+html[data-theme="light"]{--them-solid:linear-gradient(180deg,#fff,#f4f8f2);--day-solid:#e7ede5;--system-solid:#e7ede5}
+html[data-theme="sakura"]{--them-solid:linear-gradient(180deg,#fff,#f8f2f5);--day-solid:#f2e8ec;--system-solid:#f2e8ec}
+html[data-theme="simple"]{--them-solid:#202020;--day-solid:#1e1e1e;--system-solid:#1e1e1e}
+
+/* слой обоев: фиксированный фон под сообщениями */
+.chat-scroll{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.chat-scroll > .messages{flex:1;min-height:0}
+.chat-wall{position:absolute;inset:0;z-index:0;display:none;overflow:hidden;background:var(--wp-grad)}
+.wall-svg{position:absolute;inset:0;display:block;width:100%;height:100%}
+.wall-rect{fill:none}
+.wp-sprite{position:absolute;width:0;height:0;overflow:hidden}
+.wp-doodles{fill:none;stroke:var(--wp-line);stroke-width:var(--wp-line-width,1.6);stroke-linecap:round;stroke-linejoin:round;opacity:var(--wp-line-opacity)}
+html[data-wallpaper] .chat-wall{display:block}
+html[data-wallpaper] .messages{position:relative;z-index:1;background:transparent}
+
+/* пузыри и плашки не зависят от обоев */
+html[data-wallpaper] .messages{
+  --them-bg:var(--them-solid);
+  --day-bg:var(--day-solid);
+  --system-bg:var(--system-solid);
 }
-/* тёмные и цветные обои: служебные плашки читаются светлым */
-html[data-wallpaper][data-wall-tone="dark"] .messages,
-html[data-wallpaper][data-wall-tone="colorful"] .messages{
-  --day-bg:rgba(8,12,10,.46);
-  --muted-2:#c3d5ca;
-  --line:rgba(220,255,235,.14);
-  --system-bg:rgba(8,12,10,.40);
-}
+
+/* --- узоры: слой задаётся через fill, поэтому цвет и прозрачность
+   линий берутся из тона --- */
+html[data-wallpaper="cosmos"] .wall-rect{fill:url(#wp-cosmos)}
+html[data-wallpaper="games"] .wall-rect{fill:url(#wp-games)}
+html[data-wallpaper="nature"] .wall-rect{fill:url(#wp-nature)}
+html[data-wallpaper="music"] .wall-rect{fill:url(#wp-music)}
+html[data-wallpaper="food"] .wall-rect{fill:url(#wp-food)}
+html[data-wallpaper="animals"] .wall-rect{fill:url(#wp-animals)}
+html[data-wallpaper="travel"] .wall-rect{fill:url(#wp-travel)}
+html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
 
 /* --- секция в «Оформлении» --- */
 .wall-section{margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
@@ -1074,125 +1083,36 @@ html[data-wallpaper][data-wall-tone="colorful"] .messages{
   width:15px;height:15px;flex:none;border-radius:50%;
   border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.25);
 }
-[data-tone-dot="light"]{background:linear-gradient(135deg,#fffdf6,#e6e6da)}
+[data-tone-dot="light"]{background:linear-gradient(135deg,#c9c8f5,#c2d9f5 50%,#c6eadf)}
 [data-tone-dot="dark"]{background:linear-gradient(135deg,#16241d,#050807)}
 [data-tone-dot="theme"]{background:linear-gradient(135deg,var(--bg) 0 45%,var(--lime) 45% 72%,var(--mint) 72%)}
-[data-tone-dot="colorful"]{background:conic-gradient(from 210deg,#ff5c8a,#ffc45c,#5ce0a8,#5c9cff,#c45cff,#ff5c8a)}
+[data-tone-dot="colorful"]{background:conic-gradient(from 210deg,#b7d9f2,#c9c3f2,#e6b9e8,#ffc9c4,#ffe2b8,#b7d9f2)}
 
-.wall-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:7px;margin-top:2px}
+.wall-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:2px}
 .wall-card{
-  display:flex;flex-direction:column;gap:5px;padding:5px;border-radius:13px;text-align:left;
+  display:flex;flex-direction:column;gap:6px;padding:5px;border-radius:14px;text-align:left;
   background:var(--panel);border:1px solid var(--line);
   transition:background .18s,border-color .18s,transform .16s var(--ease);
 }
 .wall-card:hover{background:var(--panel-2)}
-.wall-card:active{transform:scale(.98)}
+.wall-card:active{transform:scale(.985)}
 .wall-card.is-active{border-color:var(--accent-line);
   box-shadow:0 0 0 1px var(--accent-line),0 10px 22px -20px rgba(0,0,0,.8)}
 .wall-prev{
-  position:relative;display:block;height:62px;border-radius:9px;overflow:hidden;
-  border:1px solid var(--line);
+  position:relative;display:block;height:96px;border-radius:11px;overflow:hidden;
+  border:1px solid var(--line);background:var(--wp-grad);
+  --wp-line-opacity:.95;--wp-line-width:2.6;
 }
-.wall-prev i{position:absolute;left:7px;top:7px;width:18px;height:3px;border-radius:3px;
-  background:var(--wp-prev-line);opacity:.9}
-.wall-prev i + i{top:12px;width:10px;height:2px;opacity:.6}
-.wall-prev::before,.wall-prev::after{
-  content:"";position:absolute;height:10px;border-radius:7px;
-  border:1px solid var(--wp-prev-line);
-  box-shadow:0 2px 7px -4px rgba(0,0,0,.5);
+.wall-prev svg{position:absolute;inset:0;display:block;width:100%;height:100%}
+.wall-card.is-active .wall-prev::after{
+  content:"✓";position:absolute;right:6px;top:6px;z-index:2;
+  width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
+  font-size:11px;font-weight:700;line-height:1;color:#0b1a12;background:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.28);
 }
-.wall-prev::before{left:7px;bottom:9px;width:46%;background:var(--wp-prev-them)}
-.wall-prev::after{right:7px;top:17px;width:38%;background:var(--wp-prev-mine)}
-.wall-name{font-size:10.5px;line-height:1.2;color:var(--ink);padding:0 1px;
+.wall-name{font-size:12px;line-height:1.2;color:var(--ink);padding:0 2px 1px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wall-hint{margin:10px 0 0;font-size:11px;line-height:1.45;color:var(--muted-2)}
-
-/* --- узоры. Одни и те же правила рисуют обои в чате и превью. --- */
-html[data-wallpaper="dots"] .messages,
-.wall-prev[data-wall-pattern="dots"]{
-  background-color:var(--wp-bg);
-  background-image:
-    radial-gradient(circle,var(--wp-ink) 1.15px,rgba(0,0,0,0) 1.35px),
-    radial-gradient(circle,var(--wp-accent) 1.7px,rgba(0,0,0,0) 1.9px),
-    var(--wp-glow);
-  background-size:26px 26px,104px 104px,100% 100%;
-  background-position:0 0,13px 13px,0 0;
-}
-html[data-wallpaper="waves"] .messages,
-.wall-prev[data-wall-pattern="waves"]{
-  background-color:var(--wp-bg);
-  background-image:
-    radial-gradient(circle at 50% 100%,rgba(0,0,0,0) 17px,var(--wp-ink) 18px,var(--wp-ink) 19px,rgba(0,0,0,0) 20px),
-    radial-gradient(circle at 0% 100%,rgba(0,0,0,0) 17px,var(--wp-ink-2) 18px,var(--wp-ink-2) 19px,rgba(0,0,0,0) 20px),
-    var(--wp-glow);
-  background-size:44px 22px,44px 22px,100% 100%;
-  background-position:0 0,22px 11px,0 0;
-}
-html[data-wallpaper="grid"] .messages,
-.wall-prev[data-wall-pattern="grid"]{
-  background-color:var(--wp-bg);
-  background-image:
-    linear-gradient(var(--wp-ink-2) 1px,rgba(0,0,0,0) 1px),
-    linear-gradient(90deg,var(--wp-ink-2) 1px,rgba(0,0,0,0) 1px),
-    linear-gradient(var(--wp-ink) 1px,rgba(0,0,0,0) 1px),
-    linear-gradient(90deg,var(--wp-ink) 1px,rgba(0,0,0,0) 1px),
-    var(--wp-glow);
-  background-size:22px 22px,22px 22px,110px 110px,110px 110px,100% 100%;
-}
-html[data-wallpaper="diag"] .messages,
-.wall-prev[data-wall-pattern="diag"]{
-  background-color:var(--wp-bg);
-  background-image:
-    repeating-linear-gradient(135deg,rgba(0,0,0,0) 0 18px,var(--wp-ink-2) 18px 19px,rgba(0,0,0,0) 19px 36px),
-    linear-gradient(135deg,rgba(0,0,0,0) 42%,var(--wp-accent) 50%,rgba(0,0,0,0) 58%),
-    var(--wp-glow);
-  background-size:auto,240px 240px,100% 100%;
-}
-html[data-wallpaper="rings"] .messages,
-.wall-prev[data-wall-pattern="rings"]{
-  background-color:var(--wp-bg);
-  background-image:
-    repeating-radial-gradient(circle at 50% 50%,rgba(0,0,0,0) 0 30px,var(--wp-ink-2) 31px 32px,rgba(0,0,0,0) 33px 64px),
-    repeating-radial-gradient(circle at 50% 50%,rgba(0,0,0,0) 0 96px,var(--wp-ink) 97px 98px,rgba(0,0,0,0) 99px 192px),
-    var(--wp-glow);
-  background-size:360px 360px,360px 360px,100% 100%;
-  background-position:0 0,180px 180px,0 0;
-}
-html[data-wallpaper="plaid"] .messages,
-.wall-prev[data-wall-pattern="plaid"]{
-  background-color:var(--wp-bg);
-  background-image:
-    linear-gradient(0deg,rgba(0,0,0,0) 40%,var(--wp-accent) 50%,rgba(0,0,0,0) 60%),
-    linear-gradient(90deg,rgba(0,0,0,0) 40%,var(--wp-accent) 50%,rgba(0,0,0,0) 60%),
-    repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 14px,var(--wp-ink-2) 14px 15px,rgba(0,0,0,0) 15px 28px),
-    repeating-linear-gradient(90deg,rgba(0,0,0,0) 0 14px,var(--wp-ink-2) 14px 15px,rgba(0,0,0,0) 15px 28px),
-    repeating-linear-gradient(0deg,rgba(0,0,0,0) 0 84px,var(--wp-ink) 84px 86px,rgba(0,0,0,0) 86px 168px),
-    repeating-linear-gradient(90deg,rgba(0,0,0,0) 0 84px,var(--wp-ink) 84px 86px,rgba(0,0,0,0) 86px 168px),
-    var(--wp-glow);
-  background-size:168px 168px,168px 168px,auto,auto,auto,auto,100% 100%;
-}
-html[data-wallpaper="zigzag"] .messages,
-.wall-prev[data-wall-pattern="zigzag"]{
-  background-color:var(--wp-bg);
-  background-image:
-    linear-gradient(135deg,var(--wp-ink-2) 25%,rgba(0,0,0,0) 25%),
-    linear-gradient(225deg,var(--wp-ink-2) 25%,rgba(0,0,0,0) 25%),
-    linear-gradient(315deg,var(--wp-ink-2) 25%,rgba(0,0,0,0) 25%),
-    linear-gradient(45deg,var(--wp-ink-2) 25%,rgba(0,0,0,0) 25%),
-    var(--wp-glow);
-  background-size:64px 64px,64px 64px,64px 64px,64px 64px,100% 100%;
-  background-position:-32px 0,-32px 0,0 0,0 0,0 0;
-}
-html[data-wallpaper="aurora"] .messages,
-.wall-prev[data-wall-pattern="aurora"]{
-  background-color:var(--wp-bg);
-  background-image:
-    radial-gradient(70% 45% at 12% 18%,var(--wp-accent) 0%,rgba(0,0,0,0) 68%),
-    radial-gradient(60% 40% at 88% 28%,var(--wp-accent-2) 0%,rgba(0,0,0,0) 70%),
-    radial-gradient(80% 55% at 50% 92%,var(--wp-ink-2) 0%,rgba(0,0,0,0) 72%),
-    var(--wp-glow);
-  background-size:100% 100%,100% 100%,100% 100%,100% 100%;
-}
 
 /* ------------------------------------------------------- группы */
 .av.grp{background:var(--grp-grad);
