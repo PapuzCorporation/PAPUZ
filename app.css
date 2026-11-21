@@ -27,6 +27,12 @@
   --selection:rgba(195,245,109,.25);
   --on-accent:#08120c;
 
+  /* непрочитанные: мягкая заливка вместо яркой градиентной плашки */
+  --unread-bg:rgba(79,220,168,.16);
+  --unread-ink:#c8ffe8;
+  --unread-line:rgba(120,240,190,.28);
+  --unread-glow:0 0 14px -6px rgba(79,220,168,.55);
+
   /* фон */
   --bg-grad:radial-gradient(120% 90% at 50% -10%,#08120f 0%,#05080a 55%,#030506 100%);
   --glow-1:radial-gradient(circle,rgba(74,190,110,.20),rgba(74,190,110,0) 68%);
@@ -481,11 +487,19 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .chat-item-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
 .chat-item-name{font-size:14.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .chat-item-time{font-size:11px;color:var(--muted-2);flex:none}
-.chat-item-last{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.chat-item-bottom{display:flex;align-items:center;gap:8px;min-width:0;margin-top:2px}
+.chat-item-last{flex:1;min-width:0;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chat-item-last b{color:var(--muted-2);font-weight:400}
-.badge{min-width:19px;height:19px;padding:0 6px;border-radius:10px;display:grid;place-items:center;
-  font-size:11px;font-weight:600;color:var(--on-accent);background:var(--accent-grad);
-  animation:popIn .3s var(--ease)}
+.chat-item.has-unread .chat-item-name{font-weight:600;color:var(--ink)}
+.badge{
+  flex:none;min-width:18px;height:18px;padding:0 5px;border-radius:9px;
+  display:grid;place-items:center;
+  font-size:10.5px;font-weight:700;line-height:1;letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;color:var(--unread-ink);
+  background:var(--unread-bg);
+  box-shadow:inset 0 0 0 1px var(--unread-line),var(--unread-glow,0 0 0 transparent);
+}
+.badge.pop{animation:popIn .3s var(--ease)}
 
 /* присутствие в списке чатов */
 .chat-av{position:relative;flex:none;width:46px;height:46px;display:grid;place-items:center}
@@ -1674,6 +1688,10 @@ html[data-theme="light"]{
   --selection:rgba(120,200,120,.28);
   --on-accent:#0d2a1b;
   --btn-ink:#0d2a1b;
+  --unread-bg:rgba(45,170,115,.14);
+  --unread-ink:#0c6742;
+  --unread-line:rgba(40,150,100,.26);
+  --unread-glow:0 0 0 transparent;
 
   --bg-grad:radial-gradient(120% 90% at 50% -10%,#ffffff 0%,#f4f8f2 55%,#eaf1e8 100%);
   --glow-1:radial-gradient(circle,rgba(120,205,140,.26),rgba(120,205,140,0) 68%);
@@ -1891,6 +1909,10 @@ html[data-theme="copper"]{
   --selection:rgba(240,178,122,.28);
   --on-accent:#1d0f06;
   --btn-ink:#1d0f06;
+  --unread-bg:rgba(224,154,94,.18);
+  --unread-ink:#ffd4a6;
+  --unread-line:rgba(240,178,122,.32);
+  --unread-glow:0 0 14px -6px rgba(224,154,94,.5);
 
   --bg-grad:radial-gradient(120% 90% at 50% -10%,#1c120b 0%,#100a07 55%,#080504 100%);
   --glow-1:radial-gradient(circle,rgba(200,110,55,.20),rgba(200,110,55,0) 68%);
@@ -2093,6 +2115,10 @@ html[data-theme="neon"]{
   --shadow:0 24px 60px -30px rgba(0,0,0,.9);
   --selection:rgba(219,109,245,0.25);
   --on-accent:#120811;
+  --unread-bg:rgba(220,79,196,.20);
+  --unread-ink:#ffbdf1;
+  --unread-line:rgba(230,110,210,.34);
+  --unread-glow:0 0 14px -6px rgba(220,79,196,.55);
 
   /* фон */
   --bg-grad:radial-gradient(120% 90% at 50% -10%,#160a24 0%,#08050f 55%,#040207 100%);
@@ -2339,6 +2365,10 @@ html[data-theme="ocean"]{
   --shadow:0 24px 60px -30px rgba(0,0,0,.9);
   --selection:rgba(109,229,245,0.25);
   --on-accent:#080f12;
+  --unread-bg:rgba(79,171,220,.20);
+  --unread-ink:#c2f2ff;
+  --unread-line:rgba(109,229,245,.32);
+  --unread-glow:0 0 14px -6px rgba(79,171,220,.55);
 
   /* фон */
   --bg-grad:radial-gradient(120% 90% at 50% -10%,#081a26 0%,#040b12 55%,#02060a 100%);
@@ -2585,6 +2615,10 @@ html[data-theme="sakura"]{
   --selection:rgba(200,120,157,0.28);
   --on-accent:#2a0d18;
   --btn-ink:#2a0d18;
+  --unread-bg:rgba(197,53,108,.13);
+  --unread-ink:#a51f50;
+  --unread-line:rgba(170,60,100,.26);
+  --unread-glow:0 0 0 transparent;
 
   --bg-grad:radial-gradient(120% 90% at 50% -10%,#ffffff 0%,#fcf6f9 55%,#f7edf2 100%);
   --glow-1:radial-gradient(circle,rgba(205,120,157,0.26),rgba(205,120,157,0) 68%);
@@ -2804,6 +2838,10 @@ html[data-theme="simple"]{
   --shadow:0 24px 60px -30px rgba(0,0,0,.8);
   --selection:rgba(255,255,255,.18);
   --on-accent:#101010;
+  --unread-bg:rgba(255,255,255,.14);
+  --unread-ink:#ffffff;
+  --unread-line:rgba(255,255,255,.24);
+  --unread-glow:0 0 0 transparent;
 
   /* фон */
   --bg-grad:#101010;
