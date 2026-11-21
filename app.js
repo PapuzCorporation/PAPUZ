@@ -1449,6 +1449,26 @@ function chatDiag(tag, chatId) {
       dpr: devicePixelRatio,
       fade: msgs.filter((el) => getComputedStyle(el).opacity !== '1').length,
       tail: msgs.slice(-6).map(info),
+      /* временно: длины длинных сообщений — текст это или отрисовка */
+      long: (state.messages.get(chatId) || [])
+        .filter((m) => (m.body || '').length > 2000)
+        .slice(-3)
+        .map((m) => {
+          const p = state.plain.get(plainKey(chatId, m.id)) || '';
+          return { id: m.id, cipher: (m.body || '').length, plain: p.length, tail: p.slice(-24) };
+        }),
+      domText: (() => {
+        const last = msgs.at(-1);
+        const t = last?.querySelector('.txt');
+        return { id: last?.dataset.id || '', len: t?.textContent.length || 0, meta: !!last?.querySelector('.meta') };
+      })(),
+      paint: (() => {
+        const r = wrap.getBoundingClientRect();
+        return [0.3, 0.5, 0.7, 0.9].map((f) => {
+          const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height * f);
+          return [f, el?.className || el?.tagName || '', el?.dataset?.id || ''];
+        });
+      })(),
     };
     fetch('/api/_diag', {
       method: 'POST',
@@ -1459,12 +1479,34 @@ function chatDiag(tag, chatId) {
   } catch { /* диагностика не должна ломать чат */ }
 }
 
+/* временно: снимок состояния после остановки прокрутки в чате с длинным
+   сообщением — только dev, потом удалить вместе с chatDiag */
+let longDiagTimer = 0;
+let longDiagAt = 0;
+$('#messages').addEventListener('scroll', () => {
+  const chatId = state.activeId;
+  if (!chatId) return;
+  const list = state.messages.get(chatId) || [];
+  if (!list.some((m) => (m.body || '').length > 2000)) return;
+  const now = performance.now();
+  if (now - longDiagAt < 2500) return;
+  longDiagAt = now;
+  clearTimeout(longDiagTimer);
+  longDiagTimer = setTimeout(() => chatDiag('scroll', chatId), 700);
+}, { passive: true });
+
 async function openChat(chatId) {
   const now = performance.now();
   if (openChatGuardId === chatId && now - openChatGuardAt < 400) return;
   openChatGuardId = chatId;
   openChatGuardAt = now;
-  if (state.activeId && state.activeId !== chatId) flushChatCache(state.activeId);
+  const switching = state.activeId && state.activeId !== chatId;
+  if (switching) {
+    flushChatCache(state.activeId);
+    /* при переходе в другой чат чужую ленту не показываем даже кадр */
+    $('#messages').replaceChildren();
+    loadingOlderChats.clear();
+  }
   state.activeId = chatId;
   holdPin(1400);
   chatScrolledOnce = false;
@@ -2622,6 +2664,9 @@ function messageNodes(chatId, list, texts, isChannelChat, seed = {}) {
     const mine = !isChannelChat && isMine(m);
     const same = !isChannelChat && lastSender === m.senderId && m.at - lastTs < 5 * 60e3;
     el.className = `msg ${mine ? 'mine' : 'them'}${same ? ' same' : ''}`;
+    /* у очень длинных сообщений тень на всю высоту — лишняя нагрузка
+       на отрисовку; пузырь остаётся тем же, только без тени */
+    if ((m.body || '').length > 2000) el.classList.add('long');
     el.dataset.id = String(m.id);
     if (!mine) addSenderName(el, chatId, m);
     const media = m.media || [];
@@ -2693,12 +2738,16 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
 
 /* подгрузка истории при прокрутке вверх: старые сообщения вставляем
    сверху, не перерисовывая всю ленту, и удерживаем позицию */
-let loadingOlder = false;
+const loadingOlderChats = new Set();
 const noMoreHistory = new Set();
+let userScrollAt = 0;
 
 /* любое касание ленты — уже не программная прокрутка */
-for (const ev of ['touchstart', 'wheel', 'pointerdown']) {
-  $('#messages').addEventListener(ev, releasePinHold, { passive: true });
+for (const ev of ['touchstart', 'touchmove', 'wheel', 'pointerdown']) {
+  $('#messages').addEventListener(ev, () => {
+    userScrollAt = performance.now();
+    releasePinHold();
+  }, { passive: true });
 }
 
 $('#messages').addEventListener('scroll', async () => {
@@ -2716,14 +2765,19 @@ $('#messages').addEventListener('scroll', async () => {
   /* пока лента не встала вниз, нулевая прокрутка — это ещё не «пользователь
      поднялся в начало»: иначе чат открывался с подгрузкой всей истории */
   if (!chatScrolledOnce) return;
-  if (wrap.scrollTop > 90 || loadingOlder) return;
   const chatId = state.activeId;
-  if (!chatId || noMoreHistory.has(chatId) || renderActiveChatId === chatId) return;
+  if (!chatId) return;
+  /* начинаем заранее, за экран до верха: пока листаешь, страница успевает
+     приехать, и не приходится дважды дёргать ленту */
+  if (wrap.scrollTop > 600 || loadingOlderChats.has(chatId)) return;
+  /* подгрузка только после живого касания, а не от программной прокрутки */
+  if (performance.now() - userScrollAt > 1500) return;
+  if (noMoreHistory.has(chatId) || renderActiveChatId === chatId) return;
   /* лента ещё не нарисована — историю подхватит обычный рендер */
   if (!wrap.querySelector('.msg')) return;
   const list = state.messages.get(chatId);
   if (!list?.length) return;
-  loadingOlder = true;
+  loadingOlderChats.add(chatId);
   try {
     const { messages } = await api(`/api/chats/${chatId}/messages?before=${list[0].id}`);
     if (!messages.length) {
@@ -2759,7 +2813,7 @@ $('#messages').addEventListener('scroll', async () => {
     }
     wrap.scrollTop = prevTop + (wrap.scrollHeight - prevHeight);
   } catch { /* не критично */ } finally {
-    loadingOlder = false;
+    loadingOlderChats.delete(chatId);
   }
 });
 
@@ -2824,6 +2878,12 @@ async function appendMessage(chatId, m) {
   const mine = !isChannelChat && isMine(m);
   const grouped = !isChannelChat && !newDay && prev && prev.senderId === m.senderId && m.at - prev.at < 5 * 60e3;
   el.className = `msg is-new ${mine ? 'mine' : 'them'}${grouped ? ' same' : ''}`;
+  /* длинное сообщение не анимируем: слой на всю высоту может не
+     отрисоваться на телефоне и оставить пустое место */
+  if ((m.body || '').length > 2000) {
+    el.classList.add('long');
+    el.classList.remove('is-new');
+  }
   el.dataset.id = String(m.id);
   if (!mine) addSenderName(el, chatId, m);
   if (media.length) {

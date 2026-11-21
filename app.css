@@ -639,6 +639,8 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   background:var(--mine-bg);
   border:1px solid var(--mine-line);
   box-shadow:var(--mine-shadow)}
+/* длинный пузырь без тени: тень на всю высоту тормозит отрисовку */
+.msg.them.long,.msg.mine.long{box-shadow:none}
 .msg.same{padding-top:5px;padding-bottom:5px}
 .msg .meta{display:flex;align-items:center;justify-content:flex-end;gap:5px;
   font-size:10.5px;margin-top:4px;opacity:.55;letter-spacing:.02em;font-variant-numeric:tabular-nums}
