@@ -694,9 +694,32 @@ async function cacheSaveChat(chatId) {
   await cacheTouchChat(chatId);
 }
 
+/* пачка сообщений не должна переписывать всю историю чата на каждое:
+   копим изменения и сохраняем один раз через полсекунды */
+const chatCacheTimers = new Map();
+
 function saveChatCache(chatId) {
+  clearTimeout(chatCacheTimers.get(chatId));
+  chatCacheTimers.set(chatId, setTimeout(() => {
+    chatCacheTimers.delete(chatId);
+    cacheSaveChat(chatId).catch(() => {});
+  }, 500));
+}
+
+function flushChatCache(chatId) {
+  const timer = chatCacheTimers.get(chatId);
+  if (!timer) return;
+  clearTimeout(timer);
+  chatCacheTimers.delete(chatId);
   cacheSaveChat(chatId).catch(() => {});
 }
+
+window.addEventListener('pagehide', () => {
+  for (const id of [...chatCacheTimers.keys()]) flushChatCache(id);
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) for (const id of [...chatCacheTimers.keys()]) flushChatCache(id);
+});
 
 async function cacheDeleteChatMedia(chatId) {
   const prefix = cacheName(`media:${chatId}:`);
@@ -813,10 +836,8 @@ async function refreshChatMessages(chatId) {
     }
     state.messages.set(chatId, merged);
     saveChatCache(chatId);
-    const wrap = $('#messages');
-    const nearBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 120;
-    await renderMessages(chatId, { keepScroll: !nearBottom });
-    if (nearBottom) wrap.scrollTop = wrap.scrollHeight;
+    await renderMessages(chatId, { keepScroll: !chatPinned });
+    if (chatPinned) pinMessagesNow();
   } catch { /* нет сети — остаёмся на кэше */ }
 }
 
@@ -1143,7 +1164,11 @@ function makeChatItem(c) {
 
 function paintChatPresence(avWrap, peer) {
   let badge = avWrap.querySelector('.presence-dot');
-  if (!peer) { badge?.remove(); return; }
+  if (!peer) { badge?.remove(); avWrap._presKey = ''; return; }
+  /* «в сети» приходит часто; без изменений не трогаем DOM */
+  const presKey = `${peer.online ? 1 : 0}|${peer.lastSeen || 0}`;
+  if (badge && avWrap._presKey === presKey) return;
+  avWrap._presKey = presKey;
   if (!badge) {
     badge = presenceBadge(peer);
     if (badge) avWrap.append(badge);
@@ -1156,6 +1181,14 @@ function paintChatPresence(avWrap, peer) {
 }
 
 function paintChatLast(last, c, dmPeer) {
+  /* пересобираем строку превью только когда она правда изменилась */
+  const lm = c.lastMessage;
+  const preview = state.preview.get(c.id) || '';
+  const key = lm
+    ? `${lm.id}|${lm.kind || ''}|${lm.body || ''}|${lm.mine ? 1 : 0}|${lm.senderName || ''}|${lm.media ? 1 : 0}|${c.type}|${c.members || 0}|${dmPeer?.online ? 1 : 0}|${preview}|${lm.kind === 'system' && c.type === 'channel' && isChannelMemberNotice(lm) ? 1 : 0}`
+    : `none|${c.type}|${c.members || 0}|${dmPeer?.online ? 1 : 0}`;
+  if (last._key === key) return;
+  last._key = key;
   last.textContent = '';
   last.style.color = '';
   if (!c.lastMessage) {
@@ -1204,8 +1237,10 @@ function paintChatItem(btn, c, i, dmPeer) {
   }
   paintChatPresence(ui.avWrap, c.type === 'dm' ? dmPeer : null);
 
-  ui.name.textContent = c.type === 'dm' ? (dmPeer?.displayName || c.title || 'Чат') : c.title;
-  ui.time.textContent = c.lastMessage ? hhmm(c.lastMessage.at) : '';
+  const name = c.type === 'dm' ? (dmPeer?.displayName || c.title || 'Чат') : c.title;
+  if (ui.name.textContent !== name) ui.name.textContent = name;
+  const time = c.lastMessage ? hhmm(c.lastMessage.at) : '';
+  if (ui.time.textContent !== time) ui.time.textContent = time;
   paintChatLast(ui.last, c, dmPeer);
 
   const unread = Number(c.unread) || 0;
@@ -1354,7 +1389,10 @@ function setTyping(on) {
 }
 
 async function openChat(chatId) {
+  if (state.activeId && state.activeId !== chatId) flushChatCache(state.activeId);
   state.activeId = chatId;
+  chatPinned = true;
+  chatScrolledOnce = false;
   closeChatMore();
   const chat = state.chats.find((c) => c.id === chatId);
   const peer = state.peers.get(chatId) || chat?.peer || null;
@@ -1648,7 +1686,7 @@ function imageNode(chatId, media, onOpen, grid = false) {
   const img = document.createElement('img');
   img.alt = '';
   img.loading = 'lazy';
-  img.addEventListener('load', () => { ph.remove(); img.classList.add('on'); });
+  img.addEventListener('load', () => { ph.remove(); img.classList.add('on'); schedulePin(chatId); });
   box.append(ph, img);
   box.__load = async () => {
     try {
@@ -1656,6 +1694,7 @@ function imageNode(chatId, media, onOpen, grid = false) {
     } catch {
       ph.remove();
       box.append(mediaPlaceholder('Фото не открылось'));
+      schedulePin(chatId);
     }
   };
   lazyIO.observe(box);
@@ -2443,6 +2482,33 @@ function updateTicks(chatId) {
 let renderSeq = 0;
 let renderActiveChatId = null;
 
+/* держимся ли низа ленты: пока да, всё, что меняет высоту (фото, клавиатура,
+   новые сообщения), не оставляет чат где-то в начале истории */
+let chatPinned = true;
+/* первая прокрутка вниз выполнена: до неё подгрузку старых сообщений не зовём */
+let chatScrolledOnce = false;
+let pinFrame = 0;
+
+function pinMessagesNow() {
+  const wrap = $('#messages');
+  if (wrap) wrap.scrollTop = wrap.scrollHeight;
+}
+
+function schedulePin(chatId) {
+  if (!chatPinned || chatId !== state.activeId) return;
+  if (pinFrame) return;
+  pinFrame = requestAnimationFrame(() => {
+    pinFrame = 0;
+    if (!chatPinned || chatId !== state.activeId) return;
+    pinMessagesNow();
+  });
+}
+
+/* окно или клавиатура изменили высоту ленты — если мы были внизу, остаёмся там */
+new ResizeObserver(() => {
+  if (state.activeId) schedulePin(state.activeId);
+}).observe($('#messages'));
+
 /* собирает узлы сообщений в отдельный фрагмент: пока он готовится,
    старое содержимое остаётся на экране и лента не пустеет */
 function messageNodes(chatId, list, texts, isChannelChat, seed = {}) {
@@ -2532,9 +2598,11 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
   if (keepScroll) {
     wrap.scrollTop = prevTop + (wrap.scrollHeight - prevHeight);
   } else {
+    chatPinned = true;
     requestAnimationFrame(() => {
       if (token !== renderSeq || chatId !== state.activeId) return;
       wrap.scrollTop = wrap.scrollHeight;
+      chatScrolledOnce = true;
     });
   }
 }
@@ -2546,6 +2614,10 @@ const noMoreHistory = new Set();
 
 $('#messages').addEventListener('scroll', async () => {
   const wrap = $('#messages');
+  chatPinned = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 120;
+  /* пока лента не встала вниз, нулевая прокрутка — это ещё не «пользователь
+     поднялся в начало»: иначе чат открывался с подгрузкой всей истории */
+  if (!chatScrolledOnce) return;
   if (wrap.scrollTop > 90 || loadingOlder) return;
   const chatId = state.activeId;
   if (!chatId || noMoreHistory.has(chatId) || renderActiveChatId === chatId) return;
@@ -2629,7 +2701,7 @@ async function appendMessage(chatId, m) {
   if (renderActiveChatId === chatId) return;
 
   const wrap = $('#messages');
-  const nearBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 120;
+  const nearBottom = chatPinned;
   /* новый день — новая плашка: без полного рендера она сама не появится */
   const prevDay = prev ? dayLabel(prev.at) : '';
   const day = dayLabel(m.at);
@@ -3416,6 +3488,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 $('#btn-back').addEventListener('click', () => {
+  if (state.activeId) flushChatCache(state.activeId);
   $('.shell').classList.remove('chat-open');
   state.activeId = null;
   $('#chat-body').hidden = true;
@@ -4803,6 +4876,8 @@ function resetClientState() {
   state.freshChats.clear();
   state.hydratedChats.clear();
   clearTimeout(chatsCacheTimer);
+  for (const timer of chatCacheTimers.values()) clearTimeout(timer);
+  chatCacheTimers.clear();
   for (const r of readQueue.values()) clearTimeout(r.timer);
   readQueue.clear();
   readQueueUser = null;
@@ -5029,6 +5104,68 @@ function watchEmoji() {
 }
 
 watchEmoji();
+
+/* --------------------------------------------------- производительность */
+
+/* Три больших фоновых пятна на компьютерах медленно двигаются. На слабой
+   видеокарте это заметно проседает по FPS. Замеряем кадры и, если машина
+   не тянет, замораживаем движение там, где оно остановилось: цвета, размеры
+   и положение остаются прежними, но фон больше не перерисовывается. */
+function initPerfGuard() {
+  const root = document.documentElement;
+  if (root.classList.contains('perf-lite')) return;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (innerWidth <= 860) return; // на телефоне пятна уже неподвижны
+  const cores = navigator.hardwareConcurrency || 0;
+  const mem = navigator.deviceMemory || 0;
+  if ((cores && cores <= 4) || (mem && mem <= 4)) {
+    root.classList.add('perf-lite');
+    return;
+  }
+
+  let frozen = false;
+  const freeze = () => {
+    if (frozen) return;
+    frozen = true;
+    root.classList.add('perf-lite');
+  };
+
+  const sample = (duration) => new Promise((resolve) => {
+    let start = 0;
+    let frames = 0;
+    const step = (t) => {
+      if (document.hidden) {
+        start = 0;
+        frames = 0;
+        requestAnimationFrame(step);
+        return;
+      }
+      if (!start) start = t;
+      frames += 1;
+      if (t - start >= duration) {
+        resolve({ frames, ms: t - start });
+        return;
+      }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+
+  /* 2 с после запуска, 15 с и минута: тяжёлый чат мог открыться позже */
+  const checks = [2500, 15000, 60000];
+  const check = async (delay, next) => {
+    await new Promise((r) => setTimeout(r, delay));
+    if (frozen) return;
+    const { frames, ms } = await sample(1800);
+    if (ms > 0 && frames / (ms / 1000) < 48) {
+      freeze();
+      return;
+    }
+    if (next < checks.length) check(checks[next] - checks[next - 1], next + 1);
+  };
+  check(checks[0], 1);
+}
+initPerfGuard();
 
 /* ------------------------------------------------------ размер окна */
 

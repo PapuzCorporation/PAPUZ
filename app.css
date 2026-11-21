@@ -292,6 +292,9 @@ button{background:none;border:0;cursor:pointer}
 @media (max-width:860px){
   .glow{animation:none;will-change:auto;transform:none}
 }
+/* слабый компьютер или ноутбук: замораживаем пятна там, где они остановились —
+   вид не меняется, но браузер перестаёт перерисовывать фон каждый кадр */
+html.perf-lite .glow{animation-play-state:paused;will-change:auto}
 .grain{position:absolute;inset:0;opacity:var(--grain-opacity);
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
 
