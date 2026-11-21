@@ -3056,3 +3056,44 @@ img.emoji{
   width:1.15em;height:1.15em;margin:0 .04em;vertical-align:-.19em;
   display:inline-block;pointer-events:none;
 }
+
+/* ------------------------------------ светлые обои в тёмных темах
+   На белых и радужных обоях прозрачное стекло сливается с фоном.
+   Только для этих тонов возвращаем плотное тёмное стекло композера
+   и кнопок; на тёмных и «как тема» обоях остаётся прежнее светлое. */
+html[data-theme="dark"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(5,12,9,.78);
+  --glass-bg-focus:rgba(4,10,8,.88);
+  --glass-blur:blur(16px) saturate(1.08);
+  --glass-muted:var(--muted);
+}
+html[data-theme="black"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(0,0,0,.78);
+  --glass-bg-focus:rgba(0,0,0,.90);
+  --glass-blur:blur(16px) saturate(1.02);
+  --glass-muted:var(--muted);
+}
+html[data-theme="copper"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(17,10,6,.78);
+  --glass-bg-focus:rgba(14,8,5,.88);
+  --glass-blur:blur(16px) saturate(1.08);
+  --glass-muted:var(--muted);
+}
+html[data-theme="neon"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(11,6,18,.78);
+  --glass-bg-focus:rgba(9,5,15,.88);
+  --glass-blur:blur(16px) saturate(1.1);
+  --glass-muted:var(--muted);
+}
+html[data-theme="ocean"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(3,10,16,.78);
+  --glass-bg-focus:rgba(2,8,13,.88);
+  --glass-blur:blur(16px) saturate(1.08);
+  --glass-muted:var(--muted);
+}
+html[data-theme="simple"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(14,14,14,.80);
+  --glass-bg-focus:rgba(10,10,10,.90);
+  --glass-blur:blur(16px) saturate(1.02);
+  --glass-muted:var(--muted);
+}
