@@ -22,8 +22,6 @@ const state = {
   peerSheetId: null,
   peerSheetUser: null,    // профиль участника, открытый из списка группы
   messages: new Map(),
-  freshChats: new Set(),   // чаты, которые уже сверены с сервером в этой сессии
-  hydratedChats: new Set(),// чаты, чья переписка поднята из кэша целиком
   notify: null,           // привязка Telegram и общие настройки уведомлений
   notifyCode: null,       // выданный одноразовый код, пока бот не привязан
   notifyPoll: null,
@@ -507,28 +505,17 @@ async function fingerprint(pubB64) {
     .replace(/(.{4})/g, '$1 ').trim();
 }
 
-/* одно выведение ключа на чат: без этого 40 сообщений запускали 40
-   параллельных ECDH и лента открывалась через несколько секунд */
-const chatKeyLoading = new Map();
-
 async function getChatKey(chatId) {
   if (state.chatKeys.has(chatId)) return state.chatKeys.get(chatId);
-  if (chatKeyLoading.has(chatId)) return chatKeyLoading.get(chatId);
   const peer = state.peers.get(chatId);
   if (!peer?.pubKey || !state.priv) return null;
-  const job = (async () => {
-    try {
-      const key = await K.deriveChatKey(state.priv, peer.pubKey, state.me.id, peer.id);
-      state.chatKeys.set(chatId, key);
-      return key;
-    } catch {
-      return null;
-    } finally {
-      chatKeyLoading.delete(chatId);
-    }
-  })();
-  chatKeyLoading.set(chatId, job);
-  return job;
+  try {
+    const key = await K.deriveChatKey(state.priv, peer.pubKey, state.me.id, peer.id);
+    state.chatKeys.set(chatId, key);
+    return key;
+  } catch {
+    return null;
+  }
 }
 
 /* ключ кэша расшифровки — чат + сообщение, чтобы тексты не переезжали между чатами */
@@ -549,313 +536,6 @@ async function plainOf(chatId, m) {
   }
   state.plain.set(cacheKey, text);
   return text;
-}
-
-/* ---------------------------------------------------------- кэш чатов */
-
-/* Последние 5 открытых чатов храним в IndexedDB: при следующем входе
-   список и переписка появляются сразу, а сеть догоняет в фоне.
-   Кладём только то, что и так лежит на сервере: шифртекст сообщений
-   и зашифрованные файлы, без расшифрованного текста. */
-const CACHE_DB = 'papuz-cache';
-const CACHE_KEEP_CHATS = 5;
-const CACHE_CHAT_MESSAGES = 300;   // хвост переписки на чат, чтобы кэш не разрастался
-const CACHE_MEDIA_ITEM = 6 * 1024 * 1024;
-const CACHE_MEDIA_TOTAL = 48 * 1024 * 1024;
-const CACHE_MEDIA_COUNT = 100;
-
-let cacheDB = null;
-let cacheOpening = null;
-/* индекс кэша — объект: параллельные записи теряли бы изменения, поэтому в очередь */
-let cacheChain = Promise.resolve();
-
-function cacheSerial(fn) {
-  const next = cacheChain.then(fn, fn);
-  cacheChain = next.then(() => {}, () => {});
-  return next;
-}
-
-function cacheOpen() {
-  if (cacheDB) return Promise.resolve(cacheDB);
-  if (cacheOpening) return cacheOpening;
-  cacheOpening = new Promise((resolve, reject) => {
-    if (!('indexedDB' in window)) return reject(new Error('no indexedDB'));
-    const req = indexedDB.open(CACHE_DB, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
-    };
-    req.onsuccess = () => { cacheDB = req.result; resolve(cacheDB); };
-    req.onerror = () => reject(req.error || new Error('cache'));
-    req.onblocked = () => reject(new Error('cache blocked'));
-  }).catch((err) => { cacheOpening = null; throw err; });
-  return cacheOpening;
-}
-
-function cacheName(part) {
-  return state.me ? `u${state.me.id}:${part}` : '';
-}
-
-async function cacheRead(key) {
-  try {
-    const db = await cacheOpen();
-    return await new Promise((resolve) => {
-      const req = db.transaction('kv', 'readonly').objectStore('kv').get(key);
-      req.onsuccess = () => resolve(req.result ?? null);
-      req.onerror = () => resolve(null);
-    });
-  } catch { return null; }
-}
-
-async function cacheWrite(key, value) {
-  try {
-    const db = await cacheOpen();
-    await new Promise((resolve, reject) => {
-      const tx = db.transaction('kv', 'readwrite');
-      tx.objectStore('kv').put(value, key);
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error);
-    });
-    return true;
-  } catch { return false; }
-}
-
-async function cacheRemove(key) {
-  try {
-    const db = await cacheOpen();
-    await new Promise((resolve) => {
-      const tx = db.transaction('kv', 'readwrite');
-      tx.objectStore('kv').delete(key);
-      tx.oncomplete = resolve;
-      tx.onerror = resolve;
-      tx.onabort = resolve;
-    });
-  } catch { /* ignore */ }
-}
-
-async function cacheKeyList(prefix) {
-  try {
-    const db = await cacheOpen();
-    const keys = await new Promise((resolve) => {
-      const req = db.transaction('kv', 'readonly').objectStore('kv').getAllKeys();
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => resolve([]);
-    });
-    return keys.filter((k) => String(k).startsWith(prefix));
-  } catch { return []; }
-}
-
-function cacheClear() {
-  return cacheSerial(cacheClearNow);
-}
-
-async function cacheClearNow() {
-  try {
-    const db = await cacheOpen();
-    await new Promise((resolve) => {
-      const tx = db.transaction('kv', 'readwrite');
-      tx.objectStore('kv').clear();
-      tx.oncomplete = resolve;
-      tx.onerror = resolve;
-      tx.onabort = resolve;
-    });
-  } catch { /* ignore */ }
-}
-
-let chatsCacheTimer = 0;
-function queueChatsCache() {
-  clearTimeout(chatsCacheTimer);
-  chatsCacheTimer = setTimeout(() => {
-    if (!state.me) return;
-    const chats = state.chats.filter((c) => !c.preview);
-    cacheSerial(() => cacheWrite(cacheName('chats'), { at: Date.now(), chats }));
-  }, 250);
-}
-
-function cacheTouchChat(chatId) {
-  return cacheSerial(() => cacheTouchChatNow(chatId));
-}
-
-async function cacheTouchChatNow(chatId) {
-  if (!state.me) return;
-  const idxKey = cacheName('chatIndex');
-  const idx = (await cacheRead(idxKey)) || {};
-  idx[chatId] = Date.now();
-  const keep = Object.entries(idx)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, CACHE_KEEP_CHATS);
-  const keepIds = new Set(keep.map(([id]) => String(id)));
-  for (const id of Object.keys(idx)) {
-    if (keepIds.has(String(id))) continue;
-    delete idx[id];
-    await cacheRemove(cacheName(`chat:${id}`));
-    await cacheDeleteChatMedia(id);
-  }
-  await cacheWrite(idxKey, Object.fromEntries(keep));
-}
-
-async function cacheSaveChat(chatId) {
-  const list = state.messages.get(chatId);
-  if (!state.me || !list?.length) return;
-  await cacheWrite(cacheName(`chat:${chatId}`), {
-    at: Date.now(),
-    messages: list.slice(-CACHE_CHAT_MESSAGES),
-  });
-  await cacheTouchChat(chatId);
-}
-
-/* пачка сообщений не должна переписывать всю историю чата на каждое:
-   копим изменения и сохраняем один раз через полсекунды */
-const chatCacheTimers = new Map();
-
-function saveChatCache(chatId) {
-  clearTimeout(chatCacheTimers.get(chatId));
-  chatCacheTimers.set(chatId, setTimeout(() => {
-    chatCacheTimers.delete(chatId);
-    cacheSaveChat(chatId).catch(() => {});
-  }, 500));
-}
-
-function flushChatCache(chatId) {
-  const timer = chatCacheTimers.get(chatId);
-  if (!timer) return;
-  clearTimeout(timer);
-  chatCacheTimers.delete(chatId);
-  cacheSaveChat(chatId).catch(() => {});
-}
-
-window.addEventListener('pagehide', () => {
-  for (const id of [...chatCacheTimers.keys()]) flushChatCache(id);
-});
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) for (const id of [...chatCacheTimers.keys()]) flushChatCache(id);
-});
-
-async function cacheDeleteChatMedia(chatId) {
-  const prefix = cacheName(`media:${chatId}:`);
-  const keys = await cacheKeyList(prefix);
-  for (const key of keys) await cacheRemove(key);
-  if (!keys.length) return;
-  const idxKey = cacheName('mediaIndex');
-  const idx = (await cacheRead(idxKey)) || {};
-  let changed = false;
-  for (const key of Object.keys(idx)) {
-    if (key.startsWith(prefix)) { delete idx[key]; changed = true; }
-  }
-  if (changed) await cacheWrite(idxKey, idx);
-}
-
-async function cacheMediaGet(chatId, mediaId) {
-  if (!state.me) return null;
-  return cacheRead(cacheName(`media:${chatId}:${mediaId}`));
-}
-
-function cacheMediaPut(chatId, media, data, type) {
-  return cacheSerial(() => cacheMediaPutNow(chatId, media, data, type));
-}
-
-async function cacheMediaPutNow(chatId, media, data, type) {
-  if (!state.me || data.byteLength > CACHE_MEDIA_ITEM) return;
-  const key = cacheName(`media:${chatId}:${media.id}`);
-  if (!(await cacheWrite(key, { at: Date.now(), type, data }))) return;
-  const idxKey = cacheName('mediaIndex');
-  const idx = (await cacheRead(idxKey)) || {};
-  idx[key] = { at: Date.now(), size: data.byteLength };
-  const keys = Object.keys(idx).sort((a, b) => (idx[b].at || 0) - (idx[a].at || 0));
-  const keep = new Set();
-  let total = 0;
-  for (const k of keys) {
-    const size = idx[k].size || 0;
-    if (keep.size >= CACHE_MEDIA_COUNT || total + size > CACHE_MEDIA_TOTAL) break;
-    keep.add(k);
-    total += size;
-  }
-  for (const k of keys) {
-    if (keep.has(k)) continue;
-    delete idx[k];
-    await cacheRemove(k);
-  }
-  await cacheWrite(idxKey, idx);
-}
-
-async function hydrateCache() {
-  if (!state.me || !('indexedDB' in window)) return;
-  const uid = state.me.id;
-  const saved = await cacheRead(`u${uid}:chats`);
-  if (saved?.chats?.length && !state.chats.length) {
-    state.chats = saved.chats;
-    for (const chat of state.chats) if (chat.peer) state.peers.set(chat.id, chat.peer);
-    scheduleRenderChats();
-    decryptPreviews();
-  }
-  const idx = (await cacheRead(`u${uid}:chatIndex`)) || {};
-  const ids = Object.entries(idx)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, CACHE_KEEP_CHATS)
-    .map(([id]) => Number(id))
-    .filter(Number.isFinite);
-  for (const id of ids) {
-    /* в памяти могло оказаться одно сообщение из сокета — историю всё равно
-       поднимаем из кэша, иначе при открытии чата ждём сеть */
-    if (state.messages.has(id) && (state.freshChats.has(id) || state.hydratedChats.has(id))) continue;
-    const rec = await cacheRead(`u${uid}:chat:${id}`);
-    if (rec?.messages?.length) {
-      state.messages.set(id, mergeMessages(id, rec.messages));
-      state.hydratedChats.add(id);
-    }
-  }
-}
-
-/* история конкретного чата из кэша, без ожидания сети: нужна при открытии,
-   если общий прогрев ещё не успел или в памяти было только сообщение из сокета */
-async function cacheEnsureChat(chatId) {
-  if (state.freshChats.has(chatId) || state.hydratedChats.has(chatId)) return true;
-  if (!state.me || !('indexedDB' in window)) return false;
-  const rec = await cacheRead(`u${state.me.id}:chat:${chatId}`);
-  if (!rec?.messages?.length) return false;
-  const merged = mergeMessages(chatId, rec.messages);
-  if (!merged.length) return false;
-  state.messages.set(chatId, merged);
-  state.hydratedChats.add(chatId);
-  return true;
-}
-
-async function refreshChatMessages(chatId) {
-  try {
-    const { messages } = await api(`/api/chats/${chatId}/messages`);
-    state.freshChats.add(chatId);
-    const prev = state.messages.get(chatId) || [];
-    const merged = mergeMessages(chatId, messages);
-    state.hydratedChats.add(chatId);
-    if (state.activeId !== chatId) {
-      state.messages.set(chatId, merged);
-      saveChatCache(chatId);
-      return;
-    }
-    const samePrefix = merged.length >= prev.length
-      && prev.every((m, i) => merged[i] && merged[i].id === m.id);
-    if (samePrefix) {
-      if (merged.length === prev.length) {
-        saveChatCache(chatId);
-        return;
-      }
-      /* пришли только новые сообщения — дописываем их в конец, не трогая
-         уже нарисованные: фото, видео и кружки не перезагружаются.
-         Важно: state.messages ещё не заменён на merged, иначе appendMessage
-         увидит сообщение в списке и ничего не нарисует. */
-      for (let i = prev.length; i < merged.length; i++) await appendMessage(chatId, merged[i]);
-      if (chatPinned) pinMessagesNow();
-      return;
-    }
-    state.messages.set(chatId, merged);
-    saveChatCache(chatId);
-    /* решаем про прокрутку прямо перед рендером: за время запроса
-       chatPinned мог устареть */
-    const pinned = chatPinned || performance.now() < pinHoldUntil;
-    await renderMessages(chatId, { keepScroll: !pinned });
-    if (pinned) pinMessagesNow();
-  } catch { /* нет сети — остаёмся на кэше */ }
 }
 
 /* ---------------------------------------------------------------- вход */
@@ -885,7 +565,6 @@ function showApp() {
   refreshStats().then(fillProfile);
   loadNotifications();
   initReadQueue();
-  hydrateCache().catch(() => {});
   loadChats().catch(() => {});
   connectWs();
 }
@@ -1013,9 +692,6 @@ async function loadChats() {
   for (const p of previews) {
     if (!chats.some((c) => c.id === p.id)) state.chats.unshift(p);
   }
-  /* чат только что создан или открыт: ответ списка мог прийти раньше — не теряем его */
-  const active = state.chats.find((c) => c.id === state.activeId);
-  if (active && !chats.some((c) => c.id === active.id)) state.chats.unshift(active);
   for (const c of chats) if (c.peer) state.peers.set(c.id, c.peer);
   /* API мог ответить раньше, чем presence: возвращаем свежий статус */
   applyStoredPresence();
@@ -1026,7 +702,6 @@ async function loadChats() {
   flushAllReads();
   decryptPreviews();
   refreshActiveHeader();
-  queueChatsCache();
 }
 
 function refreshActiveHeader() {
@@ -1181,11 +856,7 @@ function makeChatItem(c) {
 
 function paintChatPresence(avWrap, peer) {
   let badge = avWrap.querySelector('.presence-dot');
-  if (!peer) { badge?.remove(); avWrap._presKey = ''; return; }
-  /* «в сети» приходит часто; без изменений не трогаем DOM */
-  const presKey = `${peer.online ? 1 : 0}|${peer.lastSeen || 0}`;
-  if (badge && avWrap._presKey === presKey) return;
-  avWrap._presKey = presKey;
+  if (!peer) { badge?.remove(); return; }
   if (!badge) {
     badge = presenceBadge(peer);
     if (badge) avWrap.append(badge);
@@ -1198,14 +869,6 @@ function paintChatPresence(avWrap, peer) {
 }
 
 function paintChatLast(last, c, dmPeer) {
-  /* пересобираем строку превью только когда она правда изменилась */
-  const lm = c.lastMessage;
-  const preview = state.preview.get(c.id) || '';
-  const key = lm
-    ? `${lm.id}|${lm.kind || ''}|${lm.body || ''}|${lm.mine ? 1 : 0}|${lm.senderName || ''}|${lm.media ? 1 : 0}|${c.type}|${c.members || 0}|${dmPeer?.online ? 1 : 0}|${preview}|${lm.kind === 'system' && c.type === 'channel' && isChannelMemberNotice(lm) ? 1 : 0}`
-    : `none|${c.type}|${c.members || 0}|${dmPeer?.online ? 1 : 0}`;
-  if (last._key === key) return;
-  last._key = key;
   last.textContent = '';
   last.style.color = '';
   if (!c.lastMessage) {
@@ -1254,10 +917,8 @@ function paintChatItem(btn, c, i, dmPeer) {
   }
   paintChatPresence(ui.avWrap, c.type === 'dm' ? dmPeer : null);
 
-  const name = c.type === 'dm' ? (dmPeer?.displayName || c.title || 'Чат') : c.title;
-  if (ui.name.textContent !== name) ui.name.textContent = name;
-  const time = c.lastMessage ? hhmm(c.lastMessage.at) : '';
-  if (ui.time.textContent !== time) ui.time.textContent = time;
+  ui.name.textContent = c.type === 'dm' ? (dmPeer?.displayName || c.title || 'Чат') : c.title;
+  ui.time.textContent = c.lastMessage ? hhmm(c.lastMessage.at) : '';
   paintChatLast(ui.last, c, dmPeer);
 
   const unread = Number(c.unread) || 0;
@@ -1405,114 +1066,11 @@ function setTyping(on) {
   measure();
 }
 
-let openChatGuardId = 0;
-let openChatGuardAt = 0;
-let pinHoldUntil = 0;
-
-/* после открытия несколько мгновений держим ленту внизу: фото, шрифты и
-   замер композера меняют высоту уже после первого кадра */
-function holdPin(ms = 1200) {
-  pinHoldUntil = performance.now() + ms;
-  chatPinned = true;
-}
-function releasePinHold() {
-  pinHoldUntil = 0;
-}
-
-/* временная диагностика открытия чата: пишем метрики в лог stage-сервера */
-function chatDiag(tag, chatId) {
-  try {
-    const wrap = $('#messages');
-    if (!wrap || chatId !== state.activeId) return;
-    const msgs = [...wrap.querySelectorAll('.msg')];
-    const info = (el) => {
-      const s = getComputedStyle(el);
-      const r = el.getBoundingClientRect();
-      return [el.dataset.id || '', Math.round(r.top), Math.round(r.height), s.opacity];
-    };
-    const body = {
-      tag,
-      chatId,
-      msgs: msgs.length,
-      nodes: wrap.children.length,
-      first: msgs[0]?.dataset.id || '',
-      last: msgs.at(-1)?.dataset.id || '',
-      top: Math.round(wrap.scrollTop),
-      sh: wrap.scrollHeight,
-      ch: wrap.clientHeight,
-      dist: Math.round(wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight),
-      pinned: chatPinned,
-      hold: Math.round(pinHoldUntil - performance.now()),
-      composer: getComputedStyle($('#chat-body')).getPropertyValue('--composer-h').trim(),
-      hidden: document.hidden,
-      vv: Math.round(window.visualViewport?.height || 0),
-      dpr: devicePixelRatio,
-      fade: msgs.filter((el) => getComputedStyle(el).opacity !== '1').length,
-      tail: msgs.slice(-6).map(info),
-      /* временно: длины длинных сообщений — текст это или отрисовка */
-      long: (state.messages.get(chatId) || [])
-        .filter((m) => (m.body || '').length > 2000)
-        .slice(-3)
-        .map((m) => {
-          const p = state.plain.get(plainKey(chatId, m.id)) || '';
-          return { id: m.id, cipher: (m.body || '').length, plain: p.length, tail: p.slice(-24) };
-        }),
-      domText: (() => {
-        const last = msgs.at(-1);
-        const t = last?.querySelector('.txt');
-        return { id: last?.dataset.id || '', len: t?.textContent.length || 0, meta: !!last?.querySelector('.meta') };
-      })(),
-      paint: (() => {
-        const r = wrap.getBoundingClientRect();
-        return [0.3, 0.5, 0.7, 0.9].map((f) => {
-          const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height * f);
-          return [f, el?.className || el?.tagName || '', el?.dataset?.id || ''];
-        });
-      })(),
-    };
-    fetch('/api/_diag', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-      keepalive: true,
-    }).catch(() => {});
-  } catch { /* диагностика не должна ломать чат */ }
-}
-
-/* временно: снимок состояния после остановки прокрутки в чате с длинным
-   сообщением — только dev, потом удалить вместе с chatDiag */
-let longDiagTimer = 0;
-let longDiagAt = 0;
-$('#messages').addEventListener('scroll', () => {
-  const chatId = state.activeId;
-  if (!chatId) return;
-  const list = state.messages.get(chatId) || [];
-  if (!list.some((m) => (m.body || '').length > 2000)) return;
-  const now = performance.now();
-  if (now - longDiagAt < 2500) return;
-  longDiagAt = now;
-  clearTimeout(longDiagTimer);
-  longDiagTimer = setTimeout(() => chatDiag('scroll', chatId), 700);
-}, { passive: true });
-
 async function openChat(chatId) {
-  const now = performance.now();
-  if (openChatGuardId === chatId && now - openChatGuardAt < 400) return;
-  openChatGuardId = chatId;
-  openChatGuardAt = now;
-  /* в ленте может лежать другой чат: после «назад» activeId уже пуст,
-     поэтому смотрим, чей текст реально нарисован */
-  const switching = renderedChatId && renderedChatId !== chatId;
-  if (switching) {
-    flushChatCache(renderedChatId);
-    /* при переходе в другой чат чужую ленту не показываем даже кадр */
-    $('#messages').replaceChildren();
-    renderedChatId = 0;
-    loadingOlderChats.clear();
-  }
   state.activeId = chatId;
-  holdPin(1400);
-  chatScrolledOnce = false;
+  /* сразу убираем прошлую переписку: пока грузится новая, старые сообщения
+     не должны мигать в ленте */
+  $('#messages').innerHTML = '';
   closeChatMore();
   const chat = state.chats.find((c) => c.id === chatId);
   const peer = state.peers.get(chatId) || chat?.peer || null;
@@ -1544,46 +1102,13 @@ async function openChat(chatId) {
 
   scheduleRenderChats();
 
-  const fresh = state.freshChats.has(chatId);
-  const complete = fresh || state.hydratedChats.has(chatId);
-
-  /* Сначала кэш, сеть — потом. Ленту не чистим: новый рендер заменяет
-     содержимое одним куском, поэтому пустого экрана при открытии нет. */
-  if (!complete) await cacheEnsureChat(chatId);
-  /* пока читали кэш, могли открыть другой чат */
-  if (state.activeId !== chatId) return;
-
-  /* кэша нет — единственный случай, когда ждём сеть с пустой лентой */
-  if (!state.hydratedChats.has(chatId) && !state.freshChats.has(chatId)) {
-    try {
-      const { messages } = await api(`/api/chats/${chatId}/messages`);
-      state.messages.set(chatId, mergeMessages(chatId, messages));
-      state.freshChats.add(chatId);
-      saveChatCache(chatId);
-    } catch { /* нет сети — покажем то, что успело прийти по сокету */ }
-    if (state.activeId !== chatId) return;
+  if (!state.messages.has(chatId)) {
+    const { messages } = await api(`/api/chats/${chatId}/messages`);
+    state.messages.set(chatId, mergeMessages(chatId, messages));
   }
-
+  /* пока грузили, могли открыть другой чат — старое сообщение сюда не рисуем */
+  if (state.activeId !== chatId) return;
   await renderMessages(chatId);
-  if (state.activeId !== chatId) return;
-  pinMessagesNow();
-  /* высота ленты ещё может измениться: фото, шрифты, композер */
-  for (const ms of [80, 260, 700]) {
-    setTimeout(() => {
-      if (state.activeId === chatId && chatPinned) pinMessagesNow();
-    }, ms);
-  }
-  for (const ms of [150, 1200, 4000]) {
-    setTimeout(() => chatDiag(`open+${ms}`, chatId), ms);
-  }
-  if (!fresh) {
-    cacheTouchChat(chatId).catch(() => {});
-    /* ждём кадр, в котором лента встала вниз: иначе refresh решит,
-       что мы наверху, и оставит чат в начале истории */
-    requestAnimationFrame(() => {
-      if (state.activeId === chatId) refreshChatMessages(chatId);
-    });
-  }
   if (state.activeId === chatId && !chat?.preview) markRead(chatId);
 }
 
@@ -1633,8 +1158,10 @@ const lazyIO = new IntersectionObserver((entries) => {
   }
 }, { root: null, rootMargin: '500px 0px' });
 
-async function decodeMediaBytes(data, type, media, chatId) {
-  let blob = new Blob([data], { type: type || '' });
+async function mediaBlob(chatId, media) {
+  const res = await fetch(`/api/media/${media.id}`, { credentials: 'same-origin' });
+  if (!res.ok) throw new Error('Файл недоступен');
+  let blob = await res.blob();
   if (media.enc) {
     const key = await getChatKey(chatId);
     if (!key) throw new Error('Нет ключа шифрования');
@@ -1643,20 +1170,6 @@ async function decodeMediaBytes(data, type, media, chatId) {
     blob = new Blob([blob], { type: media.mime });
   }
   return blob;
-}
-
-async function mediaBlob(chatId, media) {
-  const cached = await cacheMediaGet(chatId, media.id);
-  if (cached?.data) {
-    try { return await decodeMediaBytes(cached.data, cached.type, media, chatId); }
-    catch { cacheRemove(cacheName(`media:${chatId}:${media.id}`)); }
-  }
-  const res = await fetch(`/api/media/${media.id}`, { credentials: 'same-origin' });
-  if (!res.ok) throw new Error('Файл недоступен');
-  const data = await res.arrayBuffer();
-  const type = res.headers.get('content-type') || '';
-  cacheMediaPut(chatId, media, data, type).catch(() => {});
-  return decodeMediaBytes(data, type, media, chatId);
 }
 
 async function mediaURL(chatId, media) {
@@ -1813,7 +1326,7 @@ function imageNode(chatId, media, onOpen, grid = false) {
   const img = document.createElement('img');
   img.alt = '';
   img.loading = 'lazy';
-  img.addEventListener('load', () => { ph.remove(); img.classList.add('on'); schedulePin(chatId); });
+  img.addEventListener('load', () => { ph.remove(); img.classList.add('on'); });
   box.append(ph, img);
   box.__load = async () => {
     try {
@@ -1821,7 +1334,6 @@ function imageNode(chatId, media, onOpen, grid = false) {
     } catch {
       ph.remove();
       box.append(mediaPlaceholder('Фото не открылось'));
-      schedulePin(chatId);
     }
   };
   lazyIO.observe(box);
@@ -2608,43 +2120,29 @@ function updateTicks(chatId) {
 /* каждый новый рендер отменяет предыдущий: старый чат не может дописаться в открытый */
 let renderSeq = 0;
 let renderActiveChatId = null;
-/* чей текст сейчас лежит в #messages — по нему понимаем, что это другой чат */
-let renderedChatId = 0;
 
-/* держимся ли низа ленты: пока да, всё, что меняет высоту (фото, клавиатура,
-   новые сообщения), не оставляет чат где-то в начале истории */
-let chatPinned = true;
-/* первая прокрутка вниз выполнена: до неё подгрузку старых сообщений не зовём */
-let chatScrolledOnce = false;
-let pinFrame = 0;
-
-function pinMessagesNow() {
+async function renderMessages(chatId, { keepScroll = false } = {}) {
+  const token = ++renderSeq;
+  if (chatId !== state.activeId) return;
   const wrap = $('#messages');
-  if (wrap) wrap.scrollTop = wrap.scrollHeight;
-}
+  wrap.innerHTML = '';
+  const list = [...(state.messages.get(chatId) || [])];
+  const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
+  renderActiveChatId = chatId;
+  const texts = await Promise.all(list.map((m) => plainOf(chatId, m)));
+  if (token !== renderSeq || chatId !== state.activeId) {
+    if (token === renderSeq) renderActiveChatId = null;
+    return;
+  }
+  /* пока расшифровывали, прилетело новое сообщение — перерисовываем с ним */
+  const current = state.messages.get(chatId) || [];
+  if (current.length !== list.length || current.some((m, i) => m.id !== list[i].id)) {
+    return renderMessages(chatId, { keepScroll });
+  }
 
-function schedulePin(chatId) {
-  if (!chatPinned || chatId !== state.activeId) return;
-  if (pinFrame) return;
-  pinFrame = requestAnimationFrame(() => {
-    pinFrame = 0;
-    if (!chatPinned || chatId !== state.activeId) return;
-    pinMessagesNow();
-  });
-}
-
-/* окно или клавиатура изменили высоту ленты — если мы были внизу, остаёмся там */
-new ResizeObserver(() => {
-  if (state.activeId) schedulePin(state.activeId);
-}).observe($('#messages'));
-
-/* собирает узлы сообщений в отдельный фрагмент: пока он готовится,
-   старое содержимое остаётся на экране и лента не пустеет */
-function messageNodes(chatId, list, texts, isChannelChat, seed = {}) {
-  const frag = document.createDocumentFragment();
-  let lastDay = seed.lastDay || '';
-  let lastSender = seed.lastSender ?? null;
-  let lastTs = seed.lastTs || 0;
+  let lastDay = '';
+  let lastSender = null;
+  let lastTs = 0;
 
   list.forEach((m, idx) => {
     if (isChannelChat && isChannelMemberNotice(m)) { lastSender = null; return; }
@@ -2653,7 +2151,7 @@ function messageNodes(chatId, list, texts, isChannelChat, seed = {}) {
       const d = document.createElement('div');
       d.className = 'msg-day';
       d.textContent = day;
-      frag.append(d);
+      wrap.append(d);
       lastDay = day;
       lastSender = null;
     }
@@ -2661,7 +2159,7 @@ function messageNodes(chatId, list, texts, isChannelChat, seed = {}) {
       const sys = document.createElement('div');
       sys.className = 'msg-system';
       sys.textContent = texts[idx] || m.body;
-      frag.append(sys);
+      wrap.append(sys);
       lastSender = null;
       return;
     }
@@ -2669,9 +2167,6 @@ function messageNodes(chatId, list, texts, isChannelChat, seed = {}) {
     const mine = !isChannelChat && isMine(m);
     const same = !isChannelChat && lastSender === m.senderId && m.at - lastTs < 5 * 60e3;
     el.className = `msg ${mine ? 'mine' : 'them'}${same ? ' same' : ''}`;
-    /* у очень длинных сообщений тень на всю высоту — лишняя нагрузка
-       на отрисовку; пузырь остаётся тем же, только без тени */
-    if ((m.body || '').length > 2000) el.classList.add('long');
     el.dataset.id = String(m.id);
     if (!mine) addSenderName(el, chatId, m);
     const media = m.media || [];
@@ -2687,139 +2182,44 @@ function messageNodes(chatId, list, texts, isChannelChat, seed = {}) {
       el.append(t);
     }
     el.append(messageMeta(chatId, m));
-    frag.append(el);
+    wrap.append(el);
 
     lastSender = m.senderId;
     lastTs = m.at;
   });
-  return { frag, lastDay, lastSender, lastTs };
-}
-
-async function renderMessages(chatId, { keepScroll = false } = {}) {
-  /* сначала проверяем чат: рендер неактивного чата не должен отменять
-     прокрутку открытого */
-  if (chatId !== state.activeId) return;
-  const token = ++renderSeq;
-  const wrap = $('#messages');
-  const list = [...(state.messages.get(chatId) || [])];
-  const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
-  renderActiveChatId = chatId;
-  let texts;
-  try {
-    texts = await Promise.all(list.map((m) => plainOf(chatId, m)));
-  } catch {
-    if (token === renderSeq) renderActiveChatId = null;
-    return;
-  }
-  if (token !== renderSeq || chatId !== state.activeId) {
-    if (token === renderSeq) renderActiveChatId = null;
-    return;
-  }
-  /* пока расшифровывали, прилетело новое сообщение — перерисовываем с ним */
-  const current = state.messages.get(chatId) || [];
-  if (current.length !== list.length || current.some((m, i) => m.id !== list[i].id)) {
-    return renderMessages(chatId, { keepScroll });
-  }
-
-  /* старые узлы живут до последнего момента: сначала собираем новые,
-     затем одним махом заменяем — без пустой ленты и «прогрузки» */
-  const prevHeight = keepScroll ? wrap.scrollHeight : 0;
-  const prevTop = keepScroll ? wrap.scrollTop : 0;
-  const { frag } = messageNodes(chatId, list, texts, isChannelChat);
-  wrap.replaceChildren(frag);
-  renderedChatId = chatId;
   renderActiveChatId = null;
-
-  if (keepScroll) {
-    wrap.scrollTop = prevTop + (wrap.scrollHeight - prevHeight);
-  } else {
-    chatPinned = true;
-    requestAnimationFrame(() => {
-      if (token !== renderSeq || chatId !== state.activeId) return;
-      wrap.scrollTop = wrap.scrollHeight;
-      chatScrolledOnce = true;
-    });
-  }
+  if (!keepScroll) requestAnimationFrame(() => {
+    if (token !== renderSeq || chatId !== state.activeId) return;
+    wrap.scrollTop = wrap.scrollHeight;
+  });
 }
 
-/* подгрузка истории при прокрутке вверх: старые сообщения вставляем
-   сверху, не перерисовывая всю ленту, и удерживаем позицию */
-const loadingOlderChats = new Set();
+/* подгрузка истории при прокрутке вверх */
+let loadingOlder = false;
 const noMoreHistory = new Set();
-let userScrollAt = 0;
-
-/* любое касание ленты — уже не программная прокрутка */
-for (const ev of ['touchstart', 'touchmove', 'wheel', 'pointerdown']) {
-  $('#messages').addEventListener(ev, () => {
-    userScrollAt = performance.now();
-    releasePinHold();
-  }, { passive: true });
-}
 
 $('#messages').addEventListener('scroll', async () => {
   const wrap = $('#messages');
-  chatPinned = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 120;
-  /* сразу после открытия прокрутка программная: держим низ и не считаем её
-     «пользователь ушёл в начало» */
-  if (performance.now() < pinHoldUntil) {
-    if (!chatPinned) {
-      chatPinned = true;
-      schedulePin(state.activeId);
-    }
-    return;
-  }
-  /* пока лента не встала вниз, нулевая прокрутка — это ещё не «пользователь
-     поднялся в начало»: иначе чат открывался с подгрузкой всей истории */
-  if (!chatScrolledOnce) return;
+  if (wrap.scrollTop > 90 || loadingOlder) return;
   const chatId = state.activeId;
-  if (!chatId) return;
-  /* начинаем заранее, за экран до верха: пока листаешь, страница успевает
-     приехать, и не приходится дважды дёргать ленту */
-  if (wrap.scrollTop > 600 || loadingOlderChats.has(chatId)) return;
-  /* подгрузка только после живого касания, а не от программной прокрутки */
-  if (performance.now() - userScrollAt > 1500) return;
-  if (noMoreHistory.has(chatId) || renderActiveChatId === chatId) return;
-  /* лента ещё не нарисована — историю подхватит обычный рендер */
-  if (!wrap.querySelector('.msg')) return;
+  if (!chatId || noMoreHistory.has(chatId)) return;
   const list = state.messages.get(chatId);
   if (!list?.length) return;
-  loadingOlderChats.add(chatId);
+  loadingOlder = true;
   try {
     const { messages } = await api(`/api/chats/${chatId}/messages?before=${list[0].id}`);
     if (!messages.length) {
       noMoreHistory.add(chatId);
-      return;
+    } else {
+      const prevHeight = wrap.scrollHeight;
+      const prevTop = wrap.scrollTop;
+      state.messages.set(chatId, mergeMessages(chatId, messages));
+      await renderMessages(chatId, { keepScroll: true });
+      if (chatId !== state.activeId) return;
+      wrap.scrollTop = wrap.scrollHeight - prevHeight + prevTop;
     }
-    if (chatId !== state.activeId) return;
-    const incoming = messages.map(normalizeMessage).sort((a, b) => a.id - b.id);
-    const texts = await Promise.all(incoming.map((m) => plainOf(chatId, m)));
-    if (chatId !== state.activeId || renderActiveChatId === chatId) return;
-    const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
-
-    const prevHeight = wrap.scrollHeight;
-    const prevTop = wrap.scrollTop;
-    const topLabel = wrap.firstElementChild?.classList.contains('msg-day') ? wrap.firstElementChild : null;
-    const oldFirst = wrap.querySelector('.msg[data-id]');
-    const oldFirstId = oldFirst ? Number(oldFirst.dataset.id) : 0;
-    const oldFirstMsg = oldFirstId
-      ? (state.messages.get(chatId) || []).find((m) => m.id === oldFirstId)
-      : null;
-    const dayAtTop = oldFirstMsg ? dayLabel(oldFirstMsg.at) : '';
-
-    state.messages.set(chatId, mergeMessages(chatId, incoming));
-    const { frag, lastDay, lastSender, lastTs } = messageNodes(chatId, incoming, texts, isChannelChat);
-    /* если старые и текущие сообщения одного дня, плашка дня уже стоит
-       на стыке — вторую не добавляем */
-    if (topLabel && dayAtTop && dayAtTop === lastDay) topLabel.remove();
-    wrap.prepend(frag);
-
-    if (oldFirst && oldFirstMsg && !isChannelChat) {
-      oldFirst.classList.toggle('same',
-        lastSender === oldFirstMsg.senderId && oldFirstMsg.at - lastTs < 5 * 60e3);
-    }
-    wrap.scrollTop = prevTop + (wrap.scrollHeight - prevHeight);
   } catch { /* не критично */ } finally {
-    loadingOlderChats.delete(chatId);
+    loadingOlder = false;
   }
 });
 
@@ -2846,8 +2246,6 @@ async function appendMessage(chatId, m) {
   if (list.some((x) => x.id === m.id)) return;
   const prev = list[list.length - 1];
   list.push(m);
-  /* сохраняем только полную историю, а не одинокое сообщение из сокета */
-  if (state.freshChats.has(chatId) || state.hydratedChats.has(chatId)) saveChatCache(chatId);
   const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
   if (isChannelChat && isChannelMemberNotice(m)) return;
   const text = await plainOf(chatId, m);
@@ -2859,17 +2257,7 @@ async function appendMessage(chatId, m) {
   if (renderActiveChatId === chatId) return;
 
   const wrap = $('#messages');
-  const nearBottom = chatPinned;
-  /* новый день — новая плашка: без полного рендера она сама не появится */
-  const prevDay = prev ? dayLabel(prev.at) : '';
-  const day = dayLabel(m.at);
-  const newDay = day !== prevDay;
-  if (newDay) {
-    const d = document.createElement('div');
-    d.className = 'msg-day';
-    d.textContent = day;
-    wrap.append(d);
-  }
+  const nearBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 120;
   if (m.kind === 'system') {
     const sys = document.createElement('div');
     sys.className = 'msg-system';
@@ -2882,14 +2270,8 @@ async function appendMessage(chatId, m) {
   }
   const el = document.createElement('div');
   const mine = !isChannelChat && isMine(m);
-  const grouped = !isChannelChat && !newDay && prev && prev.senderId === m.senderId && m.at - prev.at < 5 * 60e3;
-  el.className = `msg is-new ${mine ? 'mine' : 'them'}${grouped ? ' same' : ''}`;
-  /* длинное сообщение не анимируем: слой на всю высоту может не
-     отрисоваться на телефоне и оставить пустое место */
-  if ((m.body || '').length > 2000) {
-    el.classList.add('long');
-    el.classList.remove('is-new');
-  }
+  const grouped = !isChannelChat && prev && prev.senderId === m.senderId && m.at - prev.at < 5 * 60e3;
+  el.className = `msg ${mine ? 'mine' : 'them'}${grouped ? ' same' : ''}`;
   el.dataset.id = String(m.id);
   if (!mine) addSenderName(el, chatId, m);
   if (media.length) {
@@ -2905,9 +2287,6 @@ async function appendMessage(chatId, m) {
   }
   el.append(messageMeta(chatId, m));
   wrap.append(el);
-  /* анимация появления не должна оставить сообщение прозрачным, если
-     вкладка в этот момент была в фоне */
-  setTimeout(() => el.classList.remove('is-new'), 600);
   if (nearBottom || mine) {
     requestAnimationFrame(() => {
       if (chatId === state.activeId) wrap.scrollTop = wrap.scrollHeight;
@@ -3204,7 +2583,6 @@ async function deliver(chatId, payload, mediaIds, plainText = '') {
   }
   state.chats = [chat, ...state.chats.filter((c) => c.id !== chatId)].filter(Boolean);
   scheduleRenderChats();
-  queueChatsCache();
   return message;
 }
 
@@ -3655,7 +3033,6 @@ document.addEventListener('keydown', (e) => {
 });
 
 $('#btn-back').addEventListener('click', () => {
-  if (state.activeId) flushChatCache(state.activeId);
   $('.shell').classList.remove('chat-open');
   state.activeId = null;
   $('#chat-body').hidden = true;
@@ -5031,8 +4408,6 @@ function resetClientState() {
   state.peers.clear();
   state.presenceSnapshot.clear();
   state.chatKeys.clear();
-  chatKeyLoading.clear();
-  pinHoldUntil = 0;
   state.plain.clear();
   state.preview.clear();
   state.members.clear();
@@ -5042,11 +4417,6 @@ function resetClientState() {
   for (const url of state.blobs.values()) URL.revokeObjectURL(url);
   state.blobs.clear();
   state.rawBlobs.clear();
-  state.freshChats.clear();
-  state.hydratedChats.clear();
-  clearTimeout(chatsCacheTimer);
-  for (const timer of chatCacheTimers.values()) clearTimeout(timer);
-  chatCacheTimers.clear();
   for (const r of readQueue.values()) clearTimeout(r.timer);
   readQueue.clear();
   readQueueUser = null;
@@ -5054,10 +4424,6 @@ function resetClientState() {
   readReconcileTimer = 0;
   state.activeId = null;
   state.wsRetry = 0;
-  /* чужая лента не должна остаться в DOM после выхода */
-  $('#messages').replaceChildren();
-  renderedChatId = 0;
-  cacheClear();
 }
 
 $('#btn-logout').addEventListener('click', async () => {
@@ -5131,7 +4497,6 @@ function connectWs() {
         if ((m.chatId !== state.activeId || document.hidden) && !isMine(m)) chat.unread = (chat.unread || 0) + 1;
         state.chats = [chat, ...state.chats.filter((c) => c.id !== m.chatId)];
         scheduleRenderChats();
-        queueChatsCache();
         if (m.chatId === state.activeId) markRead(m.chatId);
       });
     }
@@ -5276,68 +4641,6 @@ function watchEmoji() {
 }
 
 watchEmoji();
-
-/* --------------------------------------------------- производительность */
-
-/* Три больших фоновых пятна на компьютерах медленно двигаются. На слабой
-   видеокарте это заметно проседает по FPS. Замеряем кадры и, если машина
-   не тянет, замораживаем движение там, где оно остановилось: цвета, размеры
-   и положение остаются прежними, но фон больше не перерисовывается. */
-function initPerfGuard() {
-  const root = document.documentElement;
-  if (root.classList.contains('perf-lite')) return;
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  if (innerWidth <= 860) return; // на телефоне пятна уже неподвижны
-  const cores = navigator.hardwareConcurrency || 0;
-  const mem = navigator.deviceMemory || 0;
-  if ((cores && cores <= 4) || (mem && mem <= 4)) {
-    root.classList.add('perf-lite');
-    return;
-  }
-
-  let frozen = false;
-  const freeze = () => {
-    if (frozen) return;
-    frozen = true;
-    root.classList.add('perf-lite');
-  };
-
-  const sample = (duration) => new Promise((resolve) => {
-    let start = 0;
-    let frames = 0;
-    const step = (t) => {
-      if (document.hidden) {
-        start = 0;
-        frames = 0;
-        requestAnimationFrame(step);
-        return;
-      }
-      if (!start) start = t;
-      frames += 1;
-      if (t - start >= duration) {
-        resolve({ frames, ms: t - start });
-        return;
-      }
-      requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  });
-
-  /* 2 с после запуска, 15 с и минута: тяжёлый чат мог открыться позже */
-  const checks = [2500, 15000, 60000];
-  const check = async (delay, next) => {
-    await new Promise((r) => setTimeout(r, delay));
-    if (frozen) return;
-    const { frames, ms } = await sample(1800);
-    if (ms > 0 && frames / (ms / 1000) < 48) {
-      freeze();
-      return;
-    }
-    if (next < checks.length) check(checks[next] - checks[next - 1], next + 1);
-  };
-  check(checks[0], 1);
-}
-initPerfGuard();
 
 /* ------------------------------------------------------ размер окна */
 

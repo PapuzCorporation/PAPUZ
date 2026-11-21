@@ -292,9 +292,6 @@ button{background:none;border:0;cursor:pointer}
 @media (max-width:860px){
   .glow{animation:none;will-change:auto;transform:none}
 }
-/* слабый компьютер или ноутбук: замораживаем пятна там, где они остановились —
-   вид не меняется, но браузер перестаёт перерисовывать фон каждый кадр */
-html.perf-lite .glow{animation-play-state:paused;will-change:auto}
 .grain{position:absolute;inset:0;opacity:var(--grain-opacity);
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
 
@@ -626,10 +623,8 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .messages::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:6px}
 
 .msg{max-width:min(76%,540px);padding:8px 12px 7px;border-radius:18px;font-size:14.5px;line-height:1.42;
-  word-wrap:break-word;overflow-wrap:anywhere;white-space:pre-wrap;position:relative}
-/* анимация только у действительно нового сообщения: при открытии чата и
-   подгрузке истории лента не должна «проявляться» заново */
-.msg.is-new{animation:msgIn .28s var(--ease) both}
+  word-wrap:break-word;overflow-wrap:anywhere;white-space:pre-wrap;
+  animation:msgIn .28s var(--ease) both;position:relative}
 .msg:not(.same){margin-top:9px}
 @keyframes msgIn{from{opacity:0;transform:translateY(7px) scale(.99)}to{opacity:1;transform:none}}
 .msg.them{align-self:flex-start;color:var(--them-ink);border-bottom-left-radius:7px;
@@ -639,8 +634,6 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   background:var(--mine-bg);
   border:1px solid var(--mine-line);
   box-shadow:var(--mine-shadow)}
-/* длинный пузырь без тени: тень на всю высоту тормозит отрисовку */
-.msg.them.long,.msg.mine.long{box-shadow:none}
 .msg.same{padding-top:5px;padding-bottom:5px}
 .msg .meta{display:flex;align-items:center;justify-content:flex-end;gap:5px;
   font-size:10.5px;margin-top:4px;opacity:.55;letter-spacing:.02em;font-variant-numeric:tabular-nums}
