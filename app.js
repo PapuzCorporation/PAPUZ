@@ -507,17 +507,28 @@ async function fingerprint(pubB64) {
     .replace(/(.{4})/g, '$1 ').trim();
 }
 
+/* одно выведение ключа на чат: без этого 40 сообщений запускали 40
+   параллельных ECDH и лента открывалась через несколько секунд */
+const chatKeyLoading = new Map();
+
 async function getChatKey(chatId) {
   if (state.chatKeys.has(chatId)) return state.chatKeys.get(chatId);
+  if (chatKeyLoading.has(chatId)) return chatKeyLoading.get(chatId);
   const peer = state.peers.get(chatId);
   if (!peer?.pubKey || !state.priv) return null;
-  try {
-    const key = await K.deriveChatKey(state.priv, peer.pubKey, state.me.id, peer.id);
-    state.chatKeys.set(chatId, key);
-    return key;
-  } catch {
-    return null;
-  }
+  const job = (async () => {
+    try {
+      const key = await K.deriveChatKey(state.priv, peer.pubKey, state.me.id, peer.id);
+      state.chatKeys.set(chatId, key);
+      return key;
+    } catch {
+      return null;
+    } finally {
+      chatKeyLoading.delete(chatId);
+    }
+  })();
+  chatKeyLoading.set(chatId, job);
+  return job;
 }
 
 /* ключ кэша расшифровки — чат + сообщение, чтобы тексты не переезжали между чатами */
@@ -816,9 +827,9 @@ async function refreshChatMessages(chatId) {
     state.freshChats.add(chatId);
     const prev = state.messages.get(chatId) || [];
     const merged = mergeMessages(chatId, messages);
-    state.messages.set(chatId, merged);
     state.hydratedChats.add(chatId);
     if (state.activeId !== chatId) {
+      state.messages.set(chatId, merged);
       saveChatCache(chatId);
       return;
     }
@@ -830,14 +841,20 @@ async function refreshChatMessages(chatId) {
         return;
       }
       /* пришли только новые сообщения — дописываем их в конец, не трогая
-         уже нарисованные: фото, видео и кружки не перезагружаются */
+         уже нарисованные: фото, видео и кружки не перезагружаются.
+         Важно: state.messages ещё не заменён на merged, иначе appendMessage
+         увидит сообщение в списке и ничего не нарисует. */
       for (let i = prev.length; i < merged.length; i++) await appendMessage(chatId, merged[i]);
+      if (chatPinned) pinMessagesNow();
       return;
     }
     state.messages.set(chatId, merged);
     saveChatCache(chatId);
-    await renderMessages(chatId, { keepScroll: !chatPinned });
-    if (chatPinned) pinMessagesNow();
+    /* решаем про прокрутку прямо перед рендером: за время запроса
+       chatPinned мог устареть */
+    const pinned = chatPinned || performance.now() < pinHoldUntil;
+    await renderMessages(chatId, { keepScroll: !pinned });
+    if (pinned) pinMessagesNow();
   } catch { /* нет сети — остаёмся на кэше */ }
 }
 
@@ -1388,10 +1405,68 @@ function setTyping(on) {
   measure();
 }
 
+let openChatGuardId = 0;
+let openChatGuardAt = 0;
+let pinHoldUntil = 0;
+
+/* после открытия несколько мгновений держим ленту внизу: фото, шрифты и
+   замер композера меняют высоту уже после первого кадра */
+function holdPin(ms = 1200) {
+  pinHoldUntil = performance.now() + ms;
+  chatPinned = true;
+}
+function releasePinHold() {
+  pinHoldUntil = 0;
+}
+
+/* временная диагностика открытия чата: пишем метрики в лог stage-сервера */
+function chatDiag(tag, chatId) {
+  try {
+    const wrap = $('#messages');
+    if (!wrap || chatId !== state.activeId) return;
+    const msgs = [...wrap.querySelectorAll('.msg')];
+    const info = (el) => {
+      const s = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return [el.dataset.id || '', Math.round(r.top), Math.round(r.height), s.opacity];
+    };
+    const body = {
+      tag,
+      chatId,
+      msgs: msgs.length,
+      nodes: wrap.children.length,
+      first: msgs[0]?.dataset.id || '',
+      last: msgs.at(-1)?.dataset.id || '',
+      top: Math.round(wrap.scrollTop),
+      sh: wrap.scrollHeight,
+      ch: wrap.clientHeight,
+      dist: Math.round(wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight),
+      pinned: chatPinned,
+      hold: Math.round(pinHoldUntil - performance.now()),
+      composer: getComputedStyle($('#chat-body')).getPropertyValue('--composer-h').trim(),
+      hidden: document.hidden,
+      vv: Math.round(window.visualViewport?.height || 0),
+      dpr: devicePixelRatio,
+      fade: msgs.filter((el) => getComputedStyle(el).opacity !== '1').length,
+      tail: msgs.slice(-6).map(info),
+    };
+    fetch('/api/_diag', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      keepalive: true,
+    }).catch(() => {});
+  } catch { /* диагностика не должна ломать чат */ }
+}
+
 async function openChat(chatId) {
+  const now = performance.now();
+  if (openChatGuardId === chatId && now - openChatGuardAt < 400) return;
+  openChatGuardId = chatId;
+  openChatGuardAt = now;
   if (state.activeId && state.activeId !== chatId) flushChatCache(state.activeId);
   state.activeId = chatId;
-  chatPinned = true;
+  holdPin(1400);
   chatScrolledOnce = false;
   closeChatMore();
   const chat = state.chats.find((c) => c.id === chatId);
@@ -1427,12 +1502,9 @@ async function openChat(chatId) {
   const fresh = state.freshChats.has(chatId);
   const complete = fresh || state.hydratedChats.has(chatId);
 
-  /* Сначала кэш, сеть — потом. Если полной истории в памяти нет, читаем её
-     из IndexedDB: это миллисекунды, поэтому лента не успевает опустеть. */
-  if (!complete) {
-    $('#messages').replaceChildren();
-    await cacheEnsureChat(chatId);
-  }
+  /* Сначала кэш, сеть — потом. Ленту не чистим: новый рендер заменяет
+     содержимое одним куском, поэтому пустого экрана при открытии нет. */
+  if (!complete) await cacheEnsureChat(chatId);
   /* пока читали кэш, могли открыть другой чат */
   if (state.activeId !== chatId) return;
 
@@ -1449,6 +1521,16 @@ async function openChat(chatId) {
 
   await renderMessages(chatId);
   if (state.activeId !== chatId) return;
+  pinMessagesNow();
+  /* высота ленты ещё может измениться: фото, шрифты, композер */
+  for (const ms of [80, 260, 700]) {
+    setTimeout(() => {
+      if (state.activeId === chatId && chatPinned) pinMessagesNow();
+    }, ms);
+  }
+  for (const ms of [150, 1200, 4000]) {
+    setTimeout(() => chatDiag(`open+${ms}`, chatId), ms);
+  }
   if (!fresh) {
     cacheTouchChat(chatId).catch(() => {});
     /* ждём кадр, в котором лента встала вниз: иначе refresh решит,
@@ -2564,8 +2646,10 @@ function messageNodes(chatId, list, texts, isChannelChat, seed = {}) {
 }
 
 async function renderMessages(chatId, { keepScroll = false } = {}) {
-  const token = ++renderSeq;
+  /* сначала проверяем чат: рендер неактивного чата не должен отменять
+     прокрутку открытого */
   if (chatId !== state.activeId) return;
+  const token = ++renderSeq;
   const wrap = $('#messages');
   const list = [...(state.messages.get(chatId) || [])];
   const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
@@ -2612,9 +2696,23 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
 let loadingOlder = false;
 const noMoreHistory = new Set();
 
+/* любое касание ленты — уже не программная прокрутка */
+for (const ev of ['touchstart', 'wheel', 'pointerdown']) {
+  $('#messages').addEventListener(ev, releasePinHold, { passive: true });
+}
+
 $('#messages').addEventListener('scroll', async () => {
   const wrap = $('#messages');
   chatPinned = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 120;
+  /* сразу после открытия прокрутка программная: держим низ и не считаем её
+     «пользователь ушёл в начало» */
+  if (performance.now() < pinHoldUntil) {
+    if (!chatPinned) {
+      chatPinned = true;
+      schedulePin(state.activeId);
+    }
+    return;
+  }
   /* пока лента не встала вниз, нулевая прокрутка — это ещё не «пользователь
      поднялся в начало»: иначе чат открывался с подгрузкой всей истории */
   if (!chatScrolledOnce) return;
@@ -2741,6 +2839,9 @@ async function appendMessage(chatId, m) {
   }
   el.append(messageMeta(chatId, m));
   wrap.append(el);
+  /* анимация появления не должна оставить сообщение прозрачным, если
+     вкладка в этот момент была в фоне */
+  setTimeout(() => el.classList.remove('is-new'), 600);
   if (nearBottom || mine) {
     requestAnimationFrame(() => {
       if (chatId === state.activeId) wrap.scrollTop = wrap.scrollHeight;
@@ -4864,6 +4965,8 @@ function resetClientState() {
   state.peers.clear();
   state.presenceSnapshot.clear();
   state.chatKeys.clear();
+  chatKeyLoading.clear();
+  pinHoldUntil = 0;
   state.plain.clear();
   state.preview.clear();
   state.members.clear();
