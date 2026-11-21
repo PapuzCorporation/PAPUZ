@@ -762,13 +762,29 @@ async function hydrateCache() {
     .map(([id]) => Number(id))
     .filter(Number.isFinite);
   for (const id of ids) {
-    if (state.messages.has(id)) continue;
+    /* в памяти могло оказаться одно сообщение из сокета — историю всё равно
+       поднимаем из кэша, иначе при открытии чата ждём сеть */
+    if (state.messages.has(id) && (state.freshChats.has(id) || state.hydratedChats.has(id))) continue;
     const rec = await cacheRead(`u${uid}:chat:${id}`);
     if (rec?.messages?.length) {
       state.messages.set(id, mergeMessages(id, rec.messages));
       state.hydratedChats.add(id);
     }
   }
+}
+
+/* история конкретного чата из кэша, без ожидания сети: нужна при открытии,
+   если общий прогрев ещё не успел или в памяти было только сообщение из сокета */
+async function cacheEnsureChat(chatId) {
+  if (state.freshChats.has(chatId) || state.hydratedChats.has(chatId)) return true;
+  if (!state.me || !('indexedDB' in window)) return false;
+  const rec = await cacheRead(`u${state.me.id}:chat:${chatId}`);
+  if (!rec?.messages?.length) return false;
+  const merged = mergeMessages(chatId, rec.messages);
+  if (!merged.length) return false;
+  state.messages.set(chatId, merged);
+  state.hydratedChats.add(chatId);
+  return true;
 }
 
 async function refreshChatMessages(chatId) {
@@ -779,9 +795,24 @@ async function refreshChatMessages(chatId) {
     const merged = mergeMessages(chatId, messages);
     state.messages.set(chatId, merged);
     state.hydratedChats.add(chatId);
+    if (state.activeId !== chatId) {
+      saveChatCache(chatId);
+      return;
+    }
+    const samePrefix = merged.length >= prev.length
+      && prev.every((m, i) => merged[i] && merged[i].id === m.id);
+    if (samePrefix) {
+      if (merged.length === prev.length) {
+        saveChatCache(chatId);
+        return;
+      }
+      /* пришли только новые сообщения — дописываем их в конец, не трогая
+         уже нарисованные: фото, видео и кружки не перезагружаются */
+      for (let i = prev.length; i < merged.length; i++) await appendMessage(chatId, merged[i]);
+      return;
+    }
+    state.messages.set(chatId, merged);
     saveChatCache(chatId);
-    if (state.activeId !== chatId) return;
-    if (merged.length === prev.length && merged.every((m, i) => m.id === prev[i].id)) return;
     const wrap = $('#messages');
     const nearBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 120;
     await renderMessages(chatId, { keepScroll: !nearBottom });
@@ -1324,9 +1355,6 @@ function setTyping(on) {
 
 async function openChat(chatId) {
   state.activeId = chatId;
-  /* сразу убираем прошлую переписку: пока грузится новая, старые сообщения
-     не должны мигать в ленте */
-  $('#messages').innerHTML = '';
   closeChatMore();
   const chat = state.chats.find((c) => c.id === chatId);
   const peer = state.peers.get(chatId) || chat?.peer || null;
@@ -1358,22 +1386,32 @@ async function openChat(chatId) {
 
   scheduleRenderChats();
 
-  let fromCache = false;
-  const known = state.messages.has(chatId);
-  /* в памяти могло быть только последнее сообщение из сокета — это не история */
-  const complete = state.freshChats.has(chatId) || state.hydratedChats.has(chatId);
-  if (!known || !complete) {
-    const { messages } = await api(`/api/chats/${chatId}/messages`);
-    state.messages.set(chatId, mergeMessages(chatId, messages));
-    state.freshChats.add(chatId);
-    saveChatCache(chatId);
-  } else if (!state.freshChats.has(chatId)) {
-    fromCache = true;
+  const fresh = state.freshChats.has(chatId);
+  const complete = fresh || state.hydratedChats.has(chatId);
+
+  /* Сначала кэш, сеть — потом. Если полной истории в памяти нет, читаем её
+     из IndexedDB: это миллисекунды, поэтому лента не успевает опустеть. */
+  if (!complete) {
+    $('#messages').replaceChildren();
+    await cacheEnsureChat(chatId);
   }
-  /* пока грузили, могли открыть другой чат — старое сообщение сюда не рисуем */
+  /* пока читали кэш, могли открыть другой чат */
   if (state.activeId !== chatId) return;
+
+  /* кэша нет — единственный случай, когда ждём сеть с пустой лентой */
+  if (!state.hydratedChats.has(chatId) && !state.freshChats.has(chatId)) {
+    try {
+      const { messages } = await api(`/api/chats/${chatId}/messages`);
+      state.messages.set(chatId, mergeMessages(chatId, messages));
+      state.freshChats.add(chatId);
+      saveChatCache(chatId);
+    } catch { /* нет сети — покажем то, что успело прийти по сокету */ }
+    if (state.activeId !== chatId) return;
+  }
+
   await renderMessages(chatId);
-  if (fromCache) {
+  if (state.activeId !== chatId) return;
+  if (!fresh) {
     cacheTouchChat(chatId).catch(() => {});
     /* ждём кадр, в котором лента встала вниз: иначе refresh решит,
        что мы наверху, и оставит чат в начале истории */
@@ -2615,7 +2653,7 @@ async function appendMessage(chatId, m) {
   const el = document.createElement('div');
   const mine = !isChannelChat && isMine(m);
   const grouped = !isChannelChat && !newDay && prev && prev.senderId === m.senderId && m.at - prev.at < 5 * 60e3;
-  el.className = `msg ${mine ? 'mine' : 'them'}${grouped ? ' same' : ''}`;
+  el.className = `msg is-new ${mine ? 'mine' : 'them'}${grouped ? ' same' : ''}`;
   el.dataset.id = String(m.id);
   if (!mine) addSenderName(el, chatId, m);
   if (media.length) {
