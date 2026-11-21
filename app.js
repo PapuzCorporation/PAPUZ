@@ -1338,7 +1338,11 @@ async function openChat(chatId) {
   await renderMessages(chatId);
   if (fromCache) {
     cacheTouchChat(chatId).catch(() => {});
-    refreshChatMessages(chatId);
+    /* ждём кадр, в котором лента встала вниз: иначе refresh решит,
+       что мы наверху, и оставит чат в начале истории */
+    requestAnimationFrame(() => {
+      if (state.activeId === chatId) refreshChatMessages(chatId);
+    });
   }
   if (state.activeId === chatId && !chat?.preview) markRead(chatId);
 }
@@ -2364,28 +2368,13 @@ function updateTicks(chatId) {
 let renderSeq = 0;
 let renderActiveChatId = null;
 
-async function renderMessages(chatId, { keepScroll = false } = {}) {
-  const token = ++renderSeq;
-  if (chatId !== state.activeId) return;
-  const wrap = $('#messages');
-  wrap.innerHTML = '';
-  const list = [...(state.messages.get(chatId) || [])];
-  const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
-  renderActiveChatId = chatId;
-  const texts = await Promise.all(list.map((m) => plainOf(chatId, m)));
-  if (token !== renderSeq || chatId !== state.activeId) {
-    if (token === renderSeq) renderActiveChatId = null;
-    return;
-  }
-  /* пока расшифровывали, прилетело новое сообщение — перерисовываем с ним */
-  const current = state.messages.get(chatId) || [];
-  if (current.length !== list.length || current.some((m, i) => m.id !== list[i].id)) {
-    return renderMessages(chatId, { keepScroll });
-  }
-
-  let lastDay = '';
-  let lastSender = null;
-  let lastTs = 0;
+/* собирает узлы сообщений в отдельный фрагмент: пока он готовится,
+   старое содержимое остаётся на экране и лента не пустеет */
+function messageNodes(chatId, list, texts, isChannelChat, seed = {}) {
+  const frag = document.createDocumentFragment();
+  let lastDay = seed.lastDay || '';
+  let lastSender = seed.lastSender ?? null;
+  let lastTs = seed.lastTs || 0;
 
   list.forEach((m, idx) => {
     if (isChannelChat && isChannelMemberNotice(m)) { lastSender = null; return; }
@@ -2394,7 +2383,7 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
       const d = document.createElement('div');
       d.className = 'msg-day';
       d.textContent = day;
-      wrap.append(d);
+      frag.append(d);
       lastDay = day;
       lastSender = null;
     }
@@ -2402,7 +2391,7 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
       const sys = document.createElement('div');
       sys.className = 'msg-system';
       sys.textContent = texts[idx] || m.body;
-      wrap.append(sys);
+      frag.append(sys);
       lastSender = null;
       return;
     }
@@ -2425,19 +2414,58 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
       el.append(t);
     }
     el.append(messageMeta(chatId, m));
-    wrap.append(el);
+    frag.append(el);
 
     lastSender = m.senderId;
     lastTs = m.at;
   });
-  renderActiveChatId = null;
-  if (!keepScroll) requestAnimationFrame(() => {
-    if (token !== renderSeq || chatId !== state.activeId) return;
-    wrap.scrollTop = wrap.scrollHeight;
-  });
+  return { frag, lastDay, lastSender, lastTs };
 }
 
-/* подгрузка истории при прокрутке вверх */
+async function renderMessages(chatId, { keepScroll = false } = {}) {
+  const token = ++renderSeq;
+  if (chatId !== state.activeId) return;
+  const wrap = $('#messages');
+  const list = [...(state.messages.get(chatId) || [])];
+  const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
+  renderActiveChatId = chatId;
+  let texts;
+  try {
+    texts = await Promise.all(list.map((m) => plainOf(chatId, m)));
+  } catch {
+    if (token === renderSeq) renderActiveChatId = null;
+    return;
+  }
+  if (token !== renderSeq || chatId !== state.activeId) {
+    if (token === renderSeq) renderActiveChatId = null;
+    return;
+  }
+  /* пока расшифровывали, прилетело новое сообщение — перерисовываем с ним */
+  const current = state.messages.get(chatId) || [];
+  if (current.length !== list.length || current.some((m, i) => m.id !== list[i].id)) {
+    return renderMessages(chatId, { keepScroll });
+  }
+
+  /* старые узлы живут до последнего момента: сначала собираем новые,
+     затем одним махом заменяем — без пустой ленты и «прогрузки» */
+  const prevHeight = keepScroll ? wrap.scrollHeight : 0;
+  const prevTop = keepScroll ? wrap.scrollTop : 0;
+  const { frag } = messageNodes(chatId, list, texts, isChannelChat);
+  wrap.replaceChildren(frag);
+  renderActiveChatId = null;
+
+  if (keepScroll) {
+    wrap.scrollTop = prevTop + (wrap.scrollHeight - prevHeight);
+  } else {
+    requestAnimationFrame(() => {
+      if (token !== renderSeq || chatId !== state.activeId) return;
+      wrap.scrollTop = wrap.scrollHeight;
+    });
+  }
+}
+
+/* подгрузка истории при прокрутке вверх: старые сообщения вставляем
+   сверху, не перерисовывая всю ленту, и удерживаем позицию */
 let loadingOlder = false;
 const noMoreHistory = new Set();
 
@@ -2445,7 +2473,9 @@ $('#messages').addEventListener('scroll', async () => {
   const wrap = $('#messages');
   if (wrap.scrollTop > 90 || loadingOlder) return;
   const chatId = state.activeId;
-  if (!chatId || noMoreHistory.has(chatId)) return;
+  if (!chatId || noMoreHistory.has(chatId) || renderActiveChatId === chatId) return;
+  /* лента ещё не нарисована — историю подхватит обычный рендер */
+  if (!wrap.querySelector('.msg')) return;
   const list = state.messages.get(chatId);
   if (!list?.length) return;
   loadingOlder = true;
@@ -2453,14 +2483,36 @@ $('#messages').addEventListener('scroll', async () => {
     const { messages } = await api(`/api/chats/${chatId}/messages?before=${list[0].id}`);
     if (!messages.length) {
       noMoreHistory.add(chatId);
-    } else {
-      const prevHeight = wrap.scrollHeight;
-      const prevTop = wrap.scrollTop;
-      state.messages.set(chatId, mergeMessages(chatId, messages));
-      await renderMessages(chatId, { keepScroll: true });
-      if (chatId !== state.activeId) return;
-      wrap.scrollTop = wrap.scrollHeight - prevHeight + prevTop;
+      return;
     }
+    if (chatId !== state.activeId) return;
+    const incoming = messages.map(normalizeMessage).sort((a, b) => a.id - b.id);
+    const texts = await Promise.all(incoming.map((m) => plainOf(chatId, m)));
+    if (chatId !== state.activeId || renderActiveChatId === chatId) return;
+    const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
+
+    const prevHeight = wrap.scrollHeight;
+    const prevTop = wrap.scrollTop;
+    const topLabel = wrap.firstElementChild?.classList.contains('msg-day') ? wrap.firstElementChild : null;
+    const oldFirst = wrap.querySelector('.msg[data-id]');
+    const oldFirstId = oldFirst ? Number(oldFirst.dataset.id) : 0;
+    const oldFirstMsg = oldFirstId
+      ? (state.messages.get(chatId) || []).find((m) => m.id === oldFirstId)
+      : null;
+    const dayAtTop = oldFirstMsg ? dayLabel(oldFirstMsg.at) : '';
+
+    state.messages.set(chatId, mergeMessages(chatId, incoming));
+    const { frag, lastDay, lastSender, lastTs } = messageNodes(chatId, incoming, texts, isChannelChat);
+    /* если старые и текущие сообщения одного дня, плашка дня уже стоит
+       на стыке — вторую не добавляем */
+    if (topLabel && dayAtTop && dayAtTop === lastDay) topLabel.remove();
+    wrap.prepend(frag);
+
+    if (oldFirst && oldFirstMsg && !isChannelChat) {
+      oldFirst.classList.toggle('same',
+        lastSender === oldFirstMsg.senderId && oldFirstMsg.at - lastTs < 5 * 60e3);
+    }
+    wrap.scrollTop = prevTop + (wrap.scrollHeight - prevHeight);
   } catch { /* не критично */ } finally {
     loadingOlder = false;
   }
@@ -2503,6 +2555,16 @@ async function appendMessage(chatId, m) {
 
   const wrap = $('#messages');
   const nearBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 120;
+  /* новый день — новая плашка: без полного рендера она сама не появится */
+  const prevDay = prev ? dayLabel(prev.at) : '';
+  const day = dayLabel(m.at);
+  const newDay = day !== prevDay;
+  if (newDay) {
+    const d = document.createElement('div');
+    d.className = 'msg-day';
+    d.textContent = day;
+    wrap.append(d);
+  }
   if (m.kind === 'system') {
     const sys = document.createElement('div');
     sys.className = 'msg-system';
@@ -2515,7 +2577,7 @@ async function appendMessage(chatId, m) {
   }
   const el = document.createElement('div');
   const mine = !isChannelChat && isMine(m);
-  const grouped = !isChannelChat && prev && prev.senderId === m.senderId && m.at - prev.at < 5 * 60e3;
+  const grouped = !isChannelChat && !newDay && prev && prev.senderId === m.senderId && m.at - prev.at < 5 * 60e3;
   el.className = `msg ${mine ? 'mine' : 'them'}${grouped ? ' same' : ''}`;
   el.dataset.id = String(m.id);
   if (!mine) addSenderName(el, chatId, m);
