@@ -1500,11 +1500,14 @@ async function openChat(chatId) {
   if (openChatGuardId === chatId && now - openChatGuardAt < 400) return;
   openChatGuardId = chatId;
   openChatGuardAt = now;
-  const switching = state.activeId && state.activeId !== chatId;
+  /* в ленте может лежать другой чат: после «назад» activeId уже пуст,
+     поэтому смотрим, чей текст реально нарисован */
+  const switching = renderedChatId && renderedChatId !== chatId;
   if (switching) {
-    flushChatCache(state.activeId);
+    flushChatCache(renderedChatId);
     /* при переходе в другой чат чужую ленту не показываем даже кадр */
     $('#messages').replaceChildren();
+    renderedChatId = 0;
     loadingOlderChats.clear();
   }
   state.activeId = chatId;
@@ -2605,6 +2608,8 @@ function updateTicks(chatId) {
 /* каждый новый рендер отменяет предыдущий: старый чат не может дописаться в открытый */
 let renderSeq = 0;
 let renderActiveChatId = null;
+/* чей текст сейчас лежит в #messages — по нему понимаем, что это другой чат */
+let renderedChatId = 0;
 
 /* держимся ли низа ленты: пока да, всё, что меняет высоту (фото, клавиатура,
    новые сообщения), не оставляет чат где-то в начале истории */
@@ -2722,6 +2727,7 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
   const prevTop = keepScroll ? wrap.scrollTop : 0;
   const { frag } = messageNodes(chatId, list, texts, isChannelChat);
   wrap.replaceChildren(frag);
+  renderedChatId = chatId;
   renderActiveChatId = null;
 
   if (keepScroll) {
@@ -5048,6 +5054,9 @@ function resetClientState() {
   readReconcileTimer = 0;
   state.activeId = null;
   state.wsRetry = 0;
+  /* чужая лента не должна остаться в DOM после выхода */
+  $('#messages').replaceChildren();
+  renderedChatId = 0;
   cacheClear();
 }
 
