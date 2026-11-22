@@ -2284,14 +2284,13 @@ const noMoreHistory = new Set();
 $('#messages').addEventListener('scroll', async () => {
   const wrap = $('#messages');
   if (loadingOlder) return;
-  /* историю подтягиваем только при движении вверх: при открытии чата
-     лента сама прыгает вниз и не должна считать это прокруткой */
   const top = wrap.scrollTop;
-  if (top >= lastHistoryTop - 2) {
-    lastHistoryTop = top;
-    return;
-  }
+  /* у самого верха пробуем снова даже без движения: так подгрузка
+     повторяется после обрыва связи. Дальше — только при движении вверх,
+     чтобы прыжок ленты вниз при открытии не считался прокруткой */
+  const up = top < lastHistoryTop - 2;
   lastHistoryTop = top;
+  if (!up && top > 90) return;
   /* начинаем заранее, за экран до верха: при быстром броске история
      успевает прийти и не «подгружается» на глазах */
   if (wrap.scrollHeight - wrap.clientHeight < 120) return;
