@@ -53,11 +53,7 @@ async function api(path, opts = {}) {
     throw new Error('unauthorized');
   }
   const data = res.headers.get('content-type')?.includes('json') ? await res.json() : null;
-  if (!res.ok) {
-    const err = new Error(data?.error || 'Ошибка сети');
-    err.status = res.status;
-    throw err;
-  }
+  if (!res.ok) throw new Error(data?.error || 'Ошибка сети');
   return data;
 }
 
@@ -220,48 +216,9 @@ function presenceBadge(peer) {
 /* --------------------------------------------------------------- темы */
 
 const THEME_KEY = 'papuz-theme';
-const THEME_COLORS = {
-  dark: '#05080a', black: '#000000', light: '#f2f6f0', copper: '#0e0906',
-  neon: '#07050d', ocean: '#040b12', sakura: '#fbf4f7', simple: '#101010',
-};
-const THEME_NAMES = {
-  dark: 'Тёмная', black: 'Глубокий чёрный', light: 'Белая', copper: 'Медь',
-  neon: 'Неон', ocean: 'Океан', sakura: 'Сакура', simple: 'Пепел',
-};
+const THEME_COLORS = { dark: '#05080a', black: '#000000', light: '#f2f6f0', copper: '#0e0906' };
+const THEME_NAMES = { dark: 'Тёмная', black: 'Глубокий чёрный', light: 'Белая', copper: 'Медь' };
 const THEMES = Object.keys(THEME_COLORS);
-
-/* режим снега: включается поверх любой темы */
-const SNOW_ENABLED = false;
-
-let snowBuilt = false;
-function ensureSnow() {
-  if (snowBuilt) return;
-  const layer = document.querySelector('.snow');
-  if (!layer) return;
-  for (let i = 0; i < 32; i++) {
-    const near = Math.random() < 0.2;
-    const flake = document.createElement('i');
-    const dot = document.createElement('b');
-    const size = near ? (3.4 + Math.random() * 2.2) : (1.2 + Math.random() * 2.2);
-    flake.style.left = (Math.random() * 100).toFixed(2) + '%';
-    flake.style.width = size.toFixed(2) + 'px';
-    flake.style.height = size.toFixed(2) + 'px';
-    flake.style.opacity = (near ? 0.2 + Math.random() * 0.2 : 0.3 + Math.random() * 0.45).toFixed(2);
-    flake.style.animationDuration = (near ? 8 + Math.random() * 6 : 12 + Math.random() * 14).toFixed(1) + 's';
-    flake.style.animationDelay = (-Math.random() * 24).toFixed(1) + 's';
-    flake.style.setProperty('--drift', (Math.random() * 90 - 45).toFixed(0) + 'px');
-    dot.style.animationDuration = (2.6 + Math.random() * 3.8).toFixed(1) + 's';
-    dot.style.animationDelay = (-Math.random() * 6).toFixed(1) + 's';
-    flake.append(dot);
-    layer.append(flake);
-  }
-  snowBuilt = true;
-}
-
-function applySnow() {
-  document.documentElement.dataset.snow = SNOW_ENABLED ? 'on' : 'off';
-  if (SNOW_ENABLED) ensureSnow();
-}
 
 function paintTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -281,7 +238,11 @@ function applyTheme(theme, persist = true) {
   if (persist) {
     try { localStorage.setItem(THEME_KEY, theme); } catch { /* приватный режим */ }
   }
-  paintTheme(theme);
+  if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    document.startViewTransition(() => paintTheme(theme));
+  } else {
+    paintTheme(theme);
+  }
 }
 
 $$('[data-theme-set]').forEach((btn) => {
@@ -296,122 +257,6 @@ window.addEventListener('storage', (e) => {
 paintTheme(THEMES.includes(document.documentElement.dataset.theme)
   ? document.documentElement.dataset.theme
   : 'dark');
-applySnow();
-
-/* -------------------------------------------------------------- обои */
-
-const WALL_KEY = 'papuz-wallpaper';
-const WALL_TONE_KEY = 'papuz-wall-tone';
-const WALLPAPERS = ['cosmos', 'games', 'nature', 'music', 'food', 'animals', 'travel', 'party'];
-const WALL_TONES = ['light', 'dark', 'theme', 'colorful'];
-const WALL_NAMES = {
-  cosmos: 'Космос', games: 'Игры', nature: 'Природа', music: 'Музыка',
-  food: 'Еда', animals: 'Звери', travel: 'Поездки', party: 'Праздник',
-};
-/* старые узоры из первой версии — мягко переводим на новые */
-const WALL_LEGACY = {
-  dots: 'cosmos', waves: 'nature', grid: 'games', diag: 'music',
-  rings: 'food', plaid: 'travel', zigzag: 'party', aurora: 'cosmos',
-};
-const WALL_TONE_NAMES = {
-  light: 'Светлая', dark: 'Тёмная', theme: 'Как тема', colorful: 'Разноцветная',
-};
-
-let wallPattern = 'none';
-let wallTone = 'theme';
-let lastWallPattern = 'cosmos';
-
-function readWallpaper() {
-  let pattern = 'none';
-  let tone = 'theme';
-  try {
-    let p = localStorage.getItem(WALL_KEY);
-    const t = localStorage.getItem(WALL_TONE_KEY);
-    if (WALL_LEGACY[p]) p = WALL_LEGACY[p];
-    if (p === 'none' || WALLPAPERS.includes(p)) pattern = p || 'none';
-    if (WALL_TONES.includes(t)) tone = t;
-  } catch { /* приватный режим */ }
-  return { pattern, tone };
-}
-
-function paintWallpaper() {
-  const html = document.documentElement;
-  if (wallPattern === 'none') delete html.dataset.wallpaper;
-  else html.dataset.wallpaper = wallPattern;
-  html.dataset.wallTone = wallTone;
-
-  for (const btn of $$('[data-wall-set]')) {
-    const on = wallPattern !== 'none' && btn.dataset.wallSet === wallPattern;
-    btn.classList.toggle('is-active', on);
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  }
-  for (const btn of $$('.wall-tone[data-wall-tone]')) {
-    const on = btn.dataset.wallTone === wallTone;
-    btn.classList.toggle('is-active', on);
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  }
-  const off = $('#wall-off');
-  if (off) off.hidden = wallPattern === 'none';
-  const status = $('#wall-status');
-  if (status) {
-    status.textContent = wallPattern === 'none'
-      ? 'Без обоев'
-      : `${WALL_NAMES[wallPattern] || 'Узор'} · ${WALL_TONE_NAMES[wallTone] || ''}`;
-  }
-  const hint = $('#wall-hint');
-  if (hint) {
-    hint.textContent = wallPattern === 'none'
-      ? 'Выбери узор — обои появятся в переписке.'
-      : 'Обои меняют только фон чата. Пузыри и текст остаются как в теме.';
-  }
-}
-
-function applyWallpaper(pattern, tone = wallTone, persist = true) {
-  if (pattern !== 'none' && !WALLPAPERS.includes(pattern)) pattern = 'none';
-  if (!WALL_TONES.includes(tone)) tone = 'theme';
-  if (pattern !== 'none') lastWallPattern = pattern;
-  wallPattern = pattern;
-  wallTone = tone;
-  if (persist) {
-    try {
-      localStorage.setItem(WALL_KEY, pattern);
-      localStorage.setItem(WALL_TONE_KEY, tone);
-    } catch { /* приватный режим */ }
-  }
-  paintWallpaper();
-}
-
-{
-  const saved = readWallpaper();
-  wallPattern = saved.pattern;
-  wallTone = saved.tone;
-  if (wallPattern !== 'none') lastWallPattern = wallPattern;
-  paintWallpaper();
-}
-
-$$('[data-wall-set]').forEach((btn) => {
-  btn.addEventListener('click', () => applyWallpaper(btn.dataset.wallSet));
-});
-
-$$('.wall-tone[data-wall-tone]').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const pattern = wallPattern === 'none' ? lastWallPattern : wallPattern;
-    applyWallpaper(pattern, btn.dataset.wallTone);
-  });
-});
-
-const wallOff = $('#wall-off');
-if (wallOff) wallOff.addEventListener('click', () => applyWallpaper('none'));
-
-/* обои поменяли в другой вкладке — подхватываем */
-window.addEventListener('storage', (e) => {
-  if (e.key !== WALL_KEY && e.key !== WALL_TONE_KEY) return;
-  const saved = readWallpaper();
-  wallPattern = saved.pattern;
-  wallTone = saved.tone;
-  if (wallPattern !== 'none') lastWallPattern = wallPattern;
-  paintWallpaper();
-});
 
 /* --------------------------------------------------------------- ключи */
 
@@ -564,8 +409,7 @@ function showApp() {
   fillProfile();
   refreshStats().then(fillProfile);
   loadNotifications();
-  initReadQueue();
-  loadChats().catch(() => {});
+  loadChats();
   connectWs();
 }
 
@@ -667,28 +511,11 @@ $('#auth-form').addEventListener('submit', async (e) => {
 
 /* --------------------------------------------------------------- чаты */
 
-/* несколько обновлений могут идти одновременно (например, пачка сообщений
-   после реконнекта): применяем только самый свежий ответ, иначе старый
-   счётчик непрочитанных перетрёт новый */
-let loadChatsSeq = 0;
-
 async function loadChats() {
-  const seq = ++loadChatsSeq;
   const { chats } = await api('/api/chats');
-  if (seq !== loadChatsSeq) return;
   /* каналы, открытые для просмотра без подписки, не теряем при обновлении списка */
   const previews = state.chats.filter((c) => c.preview);
-  const known = new Map(state.chats.map((c) => [c.id, c]));
   state.chats = chats;
-  /* запрос мог уйти раньше последнего сообщения из сокета: не откатываем
-     более свежее локальное превью и счётчик непрочитанных назад */
-  for (const c of state.chats) {
-    const prev = known.get(c.id);
-    if (prev && (Number(prev.lastMessage?.id) || 0) > (Number(c.lastMessage?.id) || 0)) {
-      c.lastMessage = prev.lastMessage;
-      c.unread = prev.unread;
-    }
-  }
   for (const p of previews) {
     if (!chats.some((c) => c.id === p.id)) state.chats.unshift(p);
   }
@@ -696,10 +523,6 @@ async function loadChats() {
   /* API мог ответить раньше, чем presence: возвращаем свежий статус */
   applyStoredPresence();
   scheduleRenderChats();
-  /* сервер мог сообщить более свежие last_read/unread — не ждём перезахода */
-  if (state.activeId) updateTicks(state.activeId);
-  if (state.activeId) markRead(state.activeId);
-  flushAllReads();
   decryptPreviews();
   refreshActiveHeader();
 }
@@ -837,19 +660,12 @@ function makeChatItem(c) {
   time.className = 'chat-item-time';
   top.append(name, time);
 
-  const bottom = document.createElement('div');
-  bottom.className = 'chat-item-bottom';
   const last = document.createElement('div');
   last.className = 'chat-item-last';
-  /* бейдж всегда в разметке: показываем его классом, без пересборки пункта */
-  const badge = document.createElement('span');
-  badge.className = 'badge';
-  badge.hidden = true;
-  bottom.append(last, badge);
-  body.append(top, bottom);
+  body.append(top, last);
   btn.append(avWrap, body);
 
-  btn._ui = { av, avWrap, name, time, last, badge, avKey: '' };
+  btn._ui = { av, avWrap, name, time, last, badge: null, avKey: '' };
   btn.addEventListener('click', () => openChat(c.id));
   return btn;
 }
@@ -922,20 +738,16 @@ function paintChatItem(btn, c, i, dmPeer) {
   paintChatLast(ui.last, c, dmPeer);
 
   const unread = Number(c.unread) || 0;
-  btn.classList.toggle('has-unread', unread > 0);
   if (unread > 0) {
-    const text = unread > 99 ? '99+' : String(unread);
-    if (ui.badge.hidden || ui.badge.textContent !== text) {
-      ui.badge.textContent = text;
-      ui.badge.title = `непрочитанных: ${unread}`;
-      ui.badge.hidden = false;
-      ui.badge.classList.remove('pop');
-      void ui.badge.offsetWidth;
-      ui.badge.classList.add('pop');
+    if (!ui.badge) {
+      ui.badge = document.createElement('span');
+      ui.badge.className = 'badge';
+      btn.append(ui.badge);
     }
-  } else if (!ui.badge.hidden) {
-    ui.badge.hidden = true;
-    ui.badge.classList.remove('pop');
+    ui.badge.textContent = unread > 99 ? '99+' : unread;
+  } else if (ui.badge) {
+    ui.badge.remove();
+    ui.badge = null;
   }
 }
 
@@ -1030,47 +842,11 @@ function applyComposerMode(chat) {
   else $('#msg-input').placeholder = 'Сообщение…';
 }
 
-/* «печатает…»: точки занимают своё место над композером, а не поверх сообщения */
-function setTyping(on) {
-  const el = $('#typing');
-  const list = $('#messages');
-  const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
-  el.hidden = !on;
-  el.classList.toggle('on', on);
-  $('#chat-body').classList.toggle('typing-on', on);
-  if (on && nearBottom) requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
-}
-
-/* высота нижней панели: лента прокручивается под композером, а не над ним */
-{
-  const chatBody = $('#chat-body');
-  const list = $('#messages');
-  const bars = [$('#composer'), $('#ch-sub')].filter(Boolean);
-  let raf = 0;
-  const measure = () => {
-    const bar = bars.find((el) => !el.hidden);
-    const h = bar ? Math.round(bar.getBoundingClientRect().height) : 0;
-    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 48;
-    chatBody.style.setProperty('--composer-h', h + 'px');
-    if (atBottom) {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
-    }
-  };
-  const ro = new ResizeObserver(measure);
-  const mo = new MutationObserver(measure);
-  for (const el of bars) {
-    ro.observe(el);
-    mo.observe(el, { attributes: true, attributeFilter: ['hidden'] });
-  }
-  measure();
-}
-
 async function openChat(chatId) {
   state.activeId = chatId;
   /* сразу убираем прошлую переписку: пока грузится новая, старые сообщения
      не должны мигать в ленте */
-  $('#messages').innerHTML = '';
+  $("#messages").innerHTML = "";
   closeChatMore();
   const chat = state.chats.find((c) => c.id === chatId);
   const peer = state.peers.get(chatId) || chat?.peer || null;
@@ -1081,7 +857,8 @@ async function openChat(chatId) {
   $('.shell').classList.add('chat-open');
   /* при переходе в другой чат старый «печатает…» не должен висеть */
   clearTimeout(state.typingTimers.get('show'));
-  setTyping(false);
+  $('#typing').classList.remove('on');
+  $('#typing').hidden = true;
 
   if (isGroup) {
     groupAvatar($('#peer-avatar'), chat, 'av-sm');
@@ -1304,13 +1081,10 @@ function icon(name, cls = '') {
 }
 
 function setIcon(btn, name) {
-  if (btn.dataset.icon === name) return;
-  btn.dataset.icon = name;
   btn.replaceChildren(icon(name));
 }
 
 function setBusy(btn) {
-  delete btn.dataset.icon;
   btn.replaceChildren();
   btn.classList.add('busy');
 }
@@ -1475,9 +1249,9 @@ function audioEl() {
   a.preload = 'auto';
   a.addEventListener('timeupdate', () => syncPlayer());
   a.addEventListener('durationchange', () => syncPlayer());
-  a.addEventListener('play', () => { syncPlayer(); startPlayerLoop(); });
-  a.addEventListener('pause', () => { stopPlayerLoop(); syncPlayer(); });
-  a.addEventListener('ended', () => { stopPlayerLoop(); if (!player.circle) stopPlayer(); });
+  a.addEventListener('play', () => syncPlayer());
+  a.addEventListener('pause', () => syncPlayer());
+  a.addEventListener('ended', () => { if (!player.circle) stopPlayer(); });
   player.audio = a;
   return a;
 }
@@ -1509,24 +1283,6 @@ function playerTime() {
   return null;
 }
 
-/* timeupdate приходит всего несколько раз в секунду — пока играет,
-   двигаем прогресс каждый кадр, чтобы полоска не дёргалась */
-let playerRaf = 0;
-function playerLoop() {
-  playerRaf = 0;
-  const st = playerTime();
-  if (!st || st.paused) return;
-  syncPlayer();
-  playerRaf = requestAnimationFrame(playerLoop);
-}
-function startPlayerLoop() {
-  if (!playerRaf) playerRaf = requestAnimationFrame(playerLoop);
-}
-function stopPlayerLoop() {
-  if (playerRaf) cancelAnimationFrame(playerRaf);
-  playerRaf = 0;
-}
-
 function syncPlayer() {
   const st = playerTime();
   if (!st) return;
@@ -1550,7 +1306,6 @@ function toggleCurrent() {
 }
 
 function stopPlayer() {
-  stopPlayerLoop();
   const hooks = player.hooks;
   const c = player.circle;
   if (c) {
@@ -1595,7 +1350,6 @@ async function playAudio({ chatId, media, title, sub, message, hooks }) {
   $('#player').hidden = false;
   a.play().catch(() => {});
   syncPlayer();
-  startPlayerLoop();
 }
 
 function playCircle({ chatId, media, box, v, prog }) {
@@ -1621,7 +1375,6 @@ function playCircle({ chatId, media, box, v, prog }) {
   $('#player').hidden = false;
   v.play().catch(() => {});
   syncPlayer();
-  startPlayerLoop();
 }
 
 /* ---- верхняя плашка ---- */
@@ -1818,19 +1571,10 @@ function circleNode(chatId, media, msg) {
   tap.addEventListener('click', () => playCircle({ chatId, media, box, v, prog }));
   v.addEventListener('click', () => playCircle({ chatId, media, box, v, prog }));
   v.addEventListener('timeupdate', () => { if (player.circle?.v === v) syncPlayer(); });
-  v.addEventListener('play', () => {
-    if (player.circle?.v !== v) return;
-    syncPlayer();
-    startPlayerLoop();
-  });
-  v.addEventListener('pause', () => {
-    if (player.circle?.v !== v) return;
-    stopPlayerLoop();
-    syncPlayer();
-  });
+  v.addEventListener('play', () => { if (player.circle?.v === v) syncPlayer(); });
+  v.addEventListener('pause', () => { if (player.circle?.v === v) syncPlayer(); });
   v.addEventListener('ended', () => {
     if (player.circle?.v !== v) return;
-    stopPlayerLoop();
     player.circle = null;
     player.hooks = null;
     $('#player').hidden = true;
@@ -1871,18 +1615,14 @@ function voiceNode(chatId, media, msg) {
 
   const wave = document.createElement('div');
   wave.className = 'a-wave';
-  const base = document.createElement('div');
-  base.className = 'a-wave-bars';
   const seed = (media.id * 2654435761) % 97;
+  const bars = [];
   for (let i = 0; i < 30; i++) {
     const bar = document.createElement('i');
     bar.style.height = `${4 + ((seed + i * 37) % 15)}px`;
-    base.append(bar);
+    wave.append(bar);
+    bars.push(bar);
   }
-  const fill = document.createElement('div');
-  fill.className = 'a-wave-fill';
-  fill.append(base.cloneNode(true));
-  wave.append(base, fill);
 
   const meta = document.createElement('div');
   meta.className = 'a-meta';
@@ -1895,10 +1635,8 @@ function voiceNode(chatId, media, msg) {
   row.append(btn, body);
 
   const paint = (p) => {
-    const cut = `${Math.max(0, Math.min(1, p)) * 100}%`;
-    const clip = `inset(0 calc(100% - ${cut}) 0 0)`;
-    fill.style.clipPath = clip;
-    fill.style.webkitClipPath = clip;
+    const n = Math.round(bars.length * p);
+    bars.forEach((b, i) => { b.classList.toggle('on', i < n); });
   };
 
   const hooks = {
@@ -1907,8 +1645,7 @@ function voiceNode(chatId, media, msg) {
       row.classList.remove('busy');
       row.classList.add('active');
       paint(d ? Math.min(1, cur / d) : 0);
-      const label = `${M.clock(cur)} · ${M.clock(d)}`;
-      if (time.textContent !== label) time.textContent = label;
+      time.textContent = `${M.clock(cur)} · ${M.clock(d)}`;
       setIcon(btn, paused ? 'play' : 'pause');
     },
     reset: () => {
@@ -2294,144 +2031,17 @@ async function appendMessage(chatId, m) {
   }
 }
 
-/* Подтверждение прочтения — не «выстрелил и забыл»: держим цель по каждому
-   чату и досылаем, пока сервер не ответил. Иначе при обрыве связи отметка
-   теряется и у собеседника сообщение так и остаётся непрочитанным. */
-const READ_QUEUE_KEY = 'papuz-read-queue';
-const readQueue = new Map();
-let readQueueUser = null;
-
-function readEntry(chatId) {
-  let r = readQueue.get(chatId);
-  if (!r) {
-    r = { want: 0, ack: 0, attempts: 0, sending: false, timer: 0 };
-    readQueue.set(chatId, r);
-  }
-  return r;
-}
-
-/* подтверждение могло обогнать список: после успешного read просим свежий
-   счётчик непрочитанных, но не чаще одного раза за полсекунды */
-let readReconcileTimer = 0;
-
-function scheduleReadReconcile() {
-  clearTimeout(readReconcileTimer);
-  readReconcileTimer = setTimeout(() => {
-    readReconcileTimer = 0;
-    if (state.me) loadChats().catch(() => {});
-  }, 400);
-}
-
-function saveReadQueue() {
-  if (!state.me) return;
-  const out = {};
-  for (const [chatId, r] of readQueue) {
-    if (r.want > r.ack) out[chatId] = r.want;
-  }
-  try {
-    const key = `${READ_QUEUE_KEY}:${state.me.id}`;
-    if (Object.keys(out).length) localStorage.setItem(key, JSON.stringify(out));
-    else localStorage.removeItem(key);
-  } catch { /* приватный режим */ }
-}
-
-/* после перезагрузки или смены аккаунта не теряем неподтверждённые отметки */
-function initReadQueue() {
-  const uid = state.me?.id || null;
-  if (readQueueUser === uid) return;
-  readQueueUser = uid;
-  for (const r of readQueue.values()) clearTimeout(r.timer);
-  readQueue.clear();
-  if (!uid) return;
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(`${READ_QUEUE_KEY}:${uid}`) || 'null'); } catch { /* приватный режим */ }
-  if (!saved || typeof saved !== 'object') return;
-  for (const [chatId, raw] of Object.entries(saved)) {
-    const id = Number(raw) || 0;
-    if (id > 0) readEntry(chatId).want = id;
-  }
-}
-
-async function flushRead(chatId) {
-  const r = readQueue.get(chatId);
-  if (!r || r.sending || r.want <= r.ack) return;
-  if (r.timer) { clearTimeout(r.timer); r.timer = 0; }
-  const wantUid = state.me?.id;
-  const target = r.want;
-  r.sending = true;
-  let error = null;
-  try {
-    await api(`/api/chats/${chatId}/read`, { method: 'POST', body: JSON.stringify({ id: target }) });
-  } catch (e) {
-    error = e;
-  }
-  r.sending = false;
-  /* пока запрос летел, могли выйти или сменить аккаунт */
-  if (!state.me || state.me.id !== wantUid || readQueue.get(chatId) !== r) return;
-  if (!error) {
-    r.ack = Math.max(r.ack, target);
-    r.attempts = 0;
-    saveReadQueue();
-    /* пока подтверждение летело, локальный счётчик мог разойтись с сервером */
-    scheduleReadReconcile();
-    if (r.want > r.ack) flushRead(chatId);
-    return;
-  }
-  /* чат удалён или доступ отозван — повторять бессмысленно */
-  if ([400, 403, 404].includes(error.status)) {
-    readQueue.delete(chatId);
-    saveReadQueue();
-    return;
-  }
-  r.attempts += 1;
-  const wait = Math.min(30000, 1200 * 2 ** Math.min(r.attempts - 1, 5)) + Math.floor(Math.random() * 400);
-  r.timer = setTimeout(() => { r.timer = 0; flushRead(chatId); }, wait);
-}
-
-function flushAllReads(force = false) {
-  initReadQueue();
-  for (const [chatId, r] of readQueue) {
-    if (r.sending || r.want <= r.ack) continue;
-    if (r.timer && !force) continue;
-    if (r.timer) { clearTimeout(r.timer); r.timer = 0; }
-    flushRead(chatId);
-  }
-}
-
-function queueRead(chatId, id) {
-  const target = Number(id) || 0;
-  if (!chatId || target <= 0) return;
+async function markRead(chatId) {
+  if (chatId !== state.activeId) return;
   const chat = state.chats.find((c) => c.id === chatId);
   /* предпросмотр канала без подписки не отмечаем прочитанным */
-  if (chat?.preview) return;
-  const r = readEntry(chatId);
-  if (target > r.want) r.want = target;
-  saveReadQueue();
-  flushRead(chatId);
-}
-
-function markRead(chatId) {
-  if (chatId !== state.activeId || document.hidden) return;
-  const chat = state.chats.find((c) => c.id === chatId);
   if (chat?.preview) return;
   const list = state.messages.get(chatId);
   const last = list?.[list.length - 1];
   if (!last) return;
-  queueRead(chatId, last.id);
+  api(`/api/chats/${chatId}/read`, { method: 'POST', body: JSON.stringify({ id: last.id }) }).catch(() => {});
   if (chat && chat.unread) { chat.unread = 0; scheduleRenderChats(); }
 }
-
-window.addEventListener('online', () => {
-  flushAllReads(true);
-  if (state.activeId) markRead(state.activeId);
-});
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden || !state.me) return;
-  flushAllReads(true);
-  if (state.activeId) markRead(state.activeId);
-});
-/* страховка на случай, если таймер в фоне заснул */
-setInterval(() => { if (!document.hidden && state.me) flushAllReads(); }, 20000);
 
 /* --------------------------------------------------------------- отправка */
 
@@ -3342,12 +2952,11 @@ function openNewSheet() {
   $('#gc-name').value = '';
   $('#gc-username').value = '';
   $('#gc-username-field').hidden = true;
-  $('#gc-people-field').hidden = false;
+  $('#gc-hint').textContent = 'В группе пишут все участники.';
   $('#gc-search').value = '';
   $('#gc-results').hidden = true;
   $('#gc-results').innerHTML = '';
   $('#gc-picked').innerHTML = '';
-  $('#gc-hint').textContent = 'В группе пишут все участники.';
   sheetOpen(newSheet, true);
   setTimeout(() => $('#gc-name').focus(), 60);
 }
@@ -3366,16 +2975,14 @@ $$('#gc-type button').forEach((b) => b.addEventListener('click', () => {
   newType = b.dataset.type;
   $$('#gc-type button').forEach((x) => x.classList.toggle('is-active', x === b));
   $('#gc-username-field').hidden = newType !== 'channel';
-  $('#gc-people-field').hidden = newType !== 'group';
-  if (newType === 'channel') {
-    /* в канал людей не добавляем: только подписка по юзернейму */
-    pickedUsers = new Map();
-    $('#gc-search').value = '';
-    $('#gc-results').hidden = true;
-    $('#gc-picked').innerHTML = '';
+  if (newType === 'channel' && pickedUsers.size > 3) {
+    const keep = [...pickedUsers.keys()].slice(0, 3);
+    pickedUsers = new Map(keep.map((id) => [id, pickedUsers.get(id)]));
+    renderPicked();
+    toast('В канал можно добавить не больше 3 человек за раз');
   }
   $('#gc-hint').textContent = newType === 'channel'
-    ? 'В канале пишут только админы. Отправь @юзернейм друзьям — они подпишутся сами.'
+    ? 'В канале пишут только админы, остальные читают. За раз — не больше 3 человек.'
     : 'В группе пишут все участники.';
 }));
 
@@ -3424,6 +3031,9 @@ async function searchForPicking(q, box, onPick, excludeIds = new Set()) {
 
 function addPicked(u) {
   if (pickedUsers.has(u.id)) return;
+  if (newType === 'channel' && pickedUsers.size >= 3) {
+    return toast('В канал можно добавить не больше 3 человек за раз');
+  }
   pickedUsers.set(u.id, u);
   $('#gc-results').hidden = true;
   $('#gc-search').value = '';
@@ -3457,17 +3067,16 @@ $('#gc-create').addEventListener('click', async () => {
     if (!/^[a-z0-9_]{3,20}$/.test(username)) {
       return toast('Юзернейм: 3–20 символов, латиница, цифры, _');
     }
+    if (pickedUsers.size > 3) return toast('В канал можно добавить не больше 3 человек за раз');
   }
   const btn = $('#gc-create');
   btn.disabled = true;
   try {
-    const memberIds = newType === 'group' ? [...pickedUsers.keys()] : [];
     const { chat } = await api('/api/groups', {
       method: 'POST',
-      body: JSON.stringify({ title, type: newType, username, memberIds }),
+      body: JSON.stringify({ title, type: newType, username, memberIds: [...pickedUsers.keys()] }),
     });
     closeNewSheet();
-    pickedUsers = new Map();
     state.chats.unshift(chat);
     scheduleRenderChats();
     await openChat(chat.id);
@@ -3521,10 +3130,7 @@ async function openGroupSheet(chatId) {
   $('#g-members-section').classList.toggle('is-single', ownerOnly);
   $('#g-members-h').hidden = ownerOnly;
   $('#g-members-h').textContent = 'Участники';
-  $('#g-avatar-edit').hidden = !canEdit;
-  $('#g-avatar-file').value = '';
-  const canAdd = canEdit && chat.type === 'group';
-  $('#g-add-btn').hidden = !canAdd;
+  $('#g-add-btn').hidden = !canEdit;
   $('#g-add-wrap').hidden = true;
   $('#g-add-search').value = '';
   $('#g-add-results').hidden = true;
@@ -3628,34 +3234,6 @@ $('#g-form').addEventListener('submit', async (e) => {
   }
 });
 
-$('#g-avatar-file').addEventListener('change', async (e) => {
-  const file = e.target.files?.[0];
-  e.target.value = '';
-  if (!file || !groupChatId) return;
-  if (file.size > 25 * 1024 * 1024) return toast('Файл слишком большой');
-  const chatId = groupChatId;
-  const t = toast('Сжимаю…', 6000);
-  try {
-    const blob = await compressAvatar(file);
-    if (!blob) throw new Error('Не получилось сжать');
-    const { chat } = await api(`/api/chats/${chatId}/avatar`, {
-      method: 'PUT',
-      body: blob,
-      headers: { 'content-type': 'image/jpeg' },
-    });
-    const local = state.chats.find((c) => c.id === chatId);
-    if (local) Object.assign(local, chat);
-    groupAvatar($('#g-avatar'), chat, 'av-xl');
-    if (state.activeId === chatId) groupAvatar($('#peer-avatar'), chat, 'av-sm');
-    scheduleRenderChats();
-    clearTimeout(t);
-    toast('Аватар обновлён');
-  } catch (err) {
-    clearTimeout(t);
-    toast(err.message);
-  }
-});
-
 $('#g-add-btn').addEventListener('click', () => {
   const wrap = $('#g-add-wrap');
   wrap.hidden = !wrap.hidden;
@@ -3669,8 +3247,6 @@ $('#g-add-search').addEventListener('input', () => {
   const box = $('#g-add-results');
   if (q.length < 2) { box.hidden = true; return; }
   gAddTimer = setTimeout(() => searchForPicking(q, box, async (u) => {
-    const chat = state.chats.find((c) => c.id === groupChatId);
-    if (!chat || chat.type !== 'group') return toast('В канал нельзя добавлять людей');
     try {
       await api(`/api/chats/${groupChatId}/members`, { method: 'POST', body: JSON.stringify({ userId: u.id }) });
       $('#g-add-search').value = '';
@@ -3827,7 +3403,6 @@ const SET_TITLES = {
   theme: 'Оформление',
   storage: 'Хранилище',
   crypto: 'Шифрование',
-  tasks: 'Задания',
   password: 'Пароль',
   devices: 'Устройства',
 };
@@ -4417,11 +3992,6 @@ function resetClientState() {
   for (const url of state.blobs.values()) URL.revokeObjectURL(url);
   state.blobs.clear();
   state.rawBlobs.clear();
-  for (const r of readQueue.values()) clearTimeout(r.timer);
-  readQueue.clear();
-  readQueueUser = null;
-  clearTimeout(readReconcileTimer);
-  readReconcileTimer = 0;
   state.activeId = null;
   state.wsRetry = 0;
 }
@@ -4466,9 +4036,6 @@ function connectWs() {
     setConn(true);
     /* при первом входе список уже грузится из showApp — не дублируем */
     if (reconnect) loadChats().catch(() => {});
-    /* связь вернулась — досылаем всё, что не успело дойти */
-    flushAllReads(true);
-    if (state.activeId) markRead(state.activeId);
   });
 
   ws.addEventListener('message', (ev) => {
@@ -4483,8 +4050,10 @@ function connectWs() {
     if (msg.type === 'message') {
       const m = normalizeMessage(msg.message);
       if (!m || !m.chatId) return;
-      /* чата может ещё не быть в списке — сообщение всё равно не теряем */
-      if (!state.chats.some((c) => c.id === m.chatId)) loadChats().catch(() => {});
+      if (!state.messages.has(m.chatId)) {
+        loadChats().catch(() => {});
+        return;
+      }
       appendMessage(m.chatId, m).then(() => {
         const chat = state.chats.find((c) => c.id === m.chatId);
         if (!chat) return;
@@ -4494,7 +4063,7 @@ function connectWs() {
           id: m.id, body: m.body, at: m.at, mine: isMine(m),
           media: m.media?.[0]?.kind || null,
         };
-        if ((m.chatId !== state.activeId || document.hidden) && !isMine(m)) chat.unread = (chat.unread || 0) + 1;
+        if (m.chatId !== state.activeId && !isMine(m)) chat.unread = (chat.unread || 0) + 1;
         state.chats = [chat, ...state.chats.filter((c) => c.id !== m.chatId)];
         scheduleRenderChats();
         if (m.chatId === state.activeId) markRead(m.chatId);
@@ -4544,9 +4113,14 @@ function connectWs() {
 
     if (msg.type === 'typing' && msg.chatId === state.activeId && msg.userId !== state.me.id
         && state.chats.find((c) => c.id === msg.chatId)?.type !== 'channel') {
-      setTyping(true);
+      const el = $('#typing');
+      el.hidden = false;
+      el.classList.add('on');
       clearTimeout(state.typingTimers.get('show'));
-      state.typingTimers.set('show', () => setTyping(false), 2600);
+      state.typingTimers.set('show', setTimeout(() => {
+        el.classList.remove('on');
+        el.hidden = true;
+      }, 2600));
     }
   });
 
