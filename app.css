@@ -1571,12 +1571,13 @@ body.rec-voice .composer{opacity:0;pointer-events:none}
   .msg{max-width:82%}
 }
 
-/* ---- лента на всю высоту: сообщения уходят под плавающий композер,
-   как в Telegram, а не обрезаются над ним ---- */
+/* ---- лента заканчивается над плавающим композером: сообщения не
+   выглядывают из-под стекла и не режутся пополам, когда панель ввода
+   меняет высоту или браузер прячет адресную строку ---- */
 html .chat-scroll{display:block}
-html .chat-scroll > .messages{position:absolute;inset:0;
-  padding-bottom:calc(var(--composer-h,68px) + 8px)}
-html #chat-body.typing-on .messages{padding-bottom:calc(var(--composer-h,68px) + 24px)}
+html .chat-scroll > .messages{position:absolute;inset:0 0 var(--composer-h,68px) 0;
+  padding-bottom:8px}
+html #chat-body.typing-on .messages{padding-bottom:24px}
 html .composer{position:absolute;left:0;right:0;bottom:0;z-index:2}
 html .typing{position:absolute;left:0;right:0;bottom:var(--composer-h,68px);z-index:2}
 html .ch-sub{position:absolute;left:0;right:0;bottom:0;z-index:2}

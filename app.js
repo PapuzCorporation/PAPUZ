@@ -1041,9 +1041,9 @@ function setTyping(on) {
   if (on && nearBottom) requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
 }
 
-/* высота нижней панели: лента прокручивается под композером, а не над ним.
-   Отдельная функция нужна, чтобы замерить панель сразу после показа чата,
-   до прокрутки вниз: иначе последнее сообщение остаётся под кнопками. */
+/* высота нижней панели: лента заканчивается над композером, поэтому
+   сообщения не выглядывают из-под стекла. Замеряем панель сразу после
+   показа чата, до прокрутки вниз. */
 function syncComposerHeight() {
   const bar = [$('#composer'), $('#ch-sub')].find((el) => el && !el.hidden);
   const h = bar ? Math.round(bar.getBoundingClientRect().height) : 0;
@@ -1051,17 +1051,19 @@ function syncComposerHeight() {
   return h;
 }
 
+/* лента держится за низ, когда меняется высота окна, панели ввода или
+   адресной строки. Если человек читает историю выше, вниз не тянем. */
+let messagesAtBottom = true;
+
 {
   const list = $('#messages');
   const bars = [$('#composer'), $('#ch-sub')].filter(Boolean);
   let raf = 0;
   const measure = () => {
-    const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 48;
     syncComposerHeight();
-    if (atBottom) {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
-    }
+    if (!messagesAtBottom) return;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
   };
   const ro = new ResizeObserver(measure);
   const mo = new MutationObserver(measure);
@@ -1069,6 +1071,9 @@ function syncComposerHeight() {
     ro.observe(el);
     mo.observe(el, { attributes: true, attributeFilter: ['hidden'] });
   }
+  /* высота ленты меняется, когда браузер показывает/прячет адресную
+     строку или клавиатуру: внизу не должно оставаться недокрутки */
+  ro.observe(list);
   measure();
 }
 
@@ -2262,11 +2267,13 @@ async function renderMessages(chatId, { keepScroll = false, reveal = false } = {
 
   if (keepScroll) {
     wrap.scrollTop = prevTop + (wrap.scrollHeight - prevHeight);
+    messagesAtBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight <= 48;
   } else {
     /* сразу вниз, не ждём кадр: иначе на мгновение видно верх ленты */
+    messagesAtBottom = true;
     wrap.scrollTop = wrap.scrollHeight;
     requestAnimationFrame(() => {
-      if (token !== renderSeq || chatId !== state.activeId) return;
+      if (token !== renderSeq || chatId !== state.activeId || !messagesAtBottom) return;
       wrap.scrollTop = wrap.scrollHeight;
     });
   }
@@ -2283,6 +2290,9 @@ const noMoreHistory = new Set();
 
 $('#messages').addEventListener('scroll', async () => {
   const wrap = $('#messages');
+  /* запоминаем, держится ли лента за низ: от этого зависит поведение
+     при изменении высоты окна и композера */
+  messagesAtBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight <= 48;
   if (loadingOlder) return;
   const top = wrap.scrollTop;
   /* у самого верха пробуем снова даже без движения: так подгрузка
