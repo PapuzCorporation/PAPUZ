@@ -481,6 +481,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .chat-item.is-new{animation:itemIn .5s var(--ease) both;animation-delay:calc(var(--i,0) * 40ms)}
 @keyframes itemIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .chat-item:hover{background:var(--panel-2)}
+.chat-item:active{background:var(--panel-2);transform:scale(.99)}
 .chat-item.is-active{background:var(--active-grad);
   box-shadow:inset 0 0 0 1px var(--active-line)}
 .chat-item-body{flex:1;min-width:0}
@@ -618,7 +619,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 
 .messages{flex:1;min-height:0;overflow-y:auto;padding:18px max(16px, calc((100% - 880px) / 2)) 8px;
   display:flex;flex-direction:column;gap:3px;
-  scrollbar-width:thin;overscroll-behavior:contain}
+  scrollbar-width:thin;overscroll-behavior:contain;overflow-anchor:none}
 .messages::-webkit-scrollbar{width:6px}
 .messages::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:6px}
 
