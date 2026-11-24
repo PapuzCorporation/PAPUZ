@@ -1,6 +1,6 @@
 /* PAPUZ — клиент */
-import * as K from './crypto.js';
-import * as M from './media.js';
+import * as K from './crypto.js?v=129o';
+import * as M from './media.js?v=129o';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -298,6 +298,158 @@ paintTheme(THEMES.includes(document.documentElement.dataset.theme)
   : 'dark');
 applySnow();
 
+/* -------------------------------------------------------------- обои */
+
+const WALL_KEY = 'papuz-wallpaper';
+const WALL_TONE_KEY = 'papuz-wall-tone';
+const WALLPAPERS = ['cosmos', 'games', 'nature', 'music', 'food', 'animals', 'travel', 'party'];
+const WALL_TONES = ['light', 'dark', 'theme', 'colorful'];
+const WALL_NAMES = {
+  cosmos: 'Космос', games: 'Игры', nature: 'Природа', music: 'Музыка',
+  food: 'Еда', animals: 'Звери', travel: 'Поездки', party: 'Праздник',
+};
+/* старые узоры из первой версии — мягко переводим на новые */
+const WALL_LEGACY = {
+  dots: 'cosmos', waves: 'nature', grid: 'games', diag: 'music',
+  rings: 'food', plaid: 'travel', zigzag: 'party', aurora: 'cosmos',
+};
+const WALL_TONE_NAMES = {
+  light: 'Светлая', dark: 'Тёмная', theme: 'Как тема', colorful: 'Разноцветная',
+};
+
+let wallPattern = 'none';
+let wallTone = 'theme';
+let lastWallPattern = 'cosmos';
+
+function readWallpaper() {
+  let pattern = 'none';
+  let tone = 'theme';
+  try {
+    let p = localStorage.getItem(WALL_KEY);
+    const t = localStorage.getItem(WALL_TONE_KEY);
+    if (WALL_LEGACY[p]) p = WALL_LEGACY[p];
+    if (p === 'none' || WALLPAPERS.includes(p)) pattern = p || 'none';
+    if (WALL_TONES.includes(t)) tone = t;
+  } catch { /* приватный режим */ }
+  return { pattern, tone };
+}
+
+/* спрайт узоров весит больше половины index.html: грузим его только
+   когда обои действительно включены, а не на каждом открытии сайта */
+const WALL_SPRITE_URL = '/walls.svg?v=129o';
+let wallDefsState = 0;
+let wallDefsWaiters = [];
+function ensureWallDefs() {
+  if (wallDefsState === 2) return Promise.resolve();
+  if (wallDefsState === 1) return new Promise((res) => wallDefsWaiters.push(res));
+  wallDefsState = 1;
+  const done = () => {
+    wallDefsState = 2;
+    for (const res of wallDefsWaiters.splice(0)) res();
+  };
+  return fetch(WALL_SPRITE_URL, { credentials: 'same-origin' })
+    .then((r) => (r.ok ? r.text() : Promise.reject(new Error('walls'))))
+    .then((text) => {
+      const tpl = document.createElement('template');
+      tpl.innerHTML = text;
+      document.body.append(tpl.content);
+      done();
+    })
+    .catch(() => {
+      /* без спрайта остаются градиент и превью: сайт не ломается */
+      wallDefsState = 0;
+      done();
+    });
+}
+
+function paintWallpaper() {
+  const html = document.documentElement;
+  if (wallPattern === 'none') delete html.dataset.wallpaper;
+  else html.dataset.wallpaper = wallPattern;
+  html.dataset.wallTone = wallTone;
+
+  for (const btn of $$('[data-wall-set]')) {
+    const on = wallPattern !== 'none' && btn.dataset.wallSet === wallPattern;
+    btn.classList.toggle('is-active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  for (const btn of $$('.wall-tone[data-wall-tone]')) {
+    const on = btn.dataset.wallTone === wallTone;
+    btn.classList.toggle('is-active', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  const off = $('#wall-off');
+  if (off) off.hidden = wallPattern === 'none';
+  const status = $('#wall-status');
+  if (status) {
+    status.textContent = wallPattern === 'none'
+      ? 'Без обоев'
+      : `${WALL_NAMES[wallPattern] || 'Узор'} · ${WALL_TONE_NAMES[wallTone] || ''}`;
+  }
+  const hint = $('#wall-hint');
+  if (hint) {
+    hint.textContent = wallPattern === 'none'
+      ? 'Выбери узор — обои появятся в переписке.'
+      : 'Обои меняют только фон чата. Пузыри и текст остаются как в теме.';
+  }
+}
+
+function applyWallpaper(pattern, tone = wallTone, persist = true) {
+  if (pattern !== 'none' && !WALLPAPERS.includes(pattern)) pattern = 'none';
+  if (!WALL_TONES.includes(tone)) tone = 'theme';
+  if (pattern !== 'none') {
+    lastWallPattern = pattern;
+    ensureWallDefs();
+  }
+  wallPattern = pattern;
+  wallTone = tone;
+  if (persist) {
+    try {
+      localStorage.setItem(WALL_KEY, pattern);
+      localStorage.setItem(WALL_TONE_KEY, tone);
+    } catch { /* приватный режим */ }
+  }
+  paintWallpaper();
+}
+
+{
+  const saved = readWallpaper();
+  wallPattern = saved.pattern;
+  wallTone = saved.tone;
+  if (wallPattern !== 'none') {
+    lastWallPattern = wallPattern;
+    ensureWallDefs();
+  }
+  paintWallpaper();
+}
+
+$$('[data-wall-set]').forEach((btn) => {
+  btn.addEventListener('click', () => applyWallpaper(btn.dataset.wallSet));
+});
+
+$$('.wall-tone[data-wall-tone]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const pattern = wallPattern === 'none' ? lastWallPattern : wallPattern;
+    applyWallpaper(pattern, btn.dataset.wallTone);
+  });
+});
+
+const wallOff = $('#wall-off');
+if (wallOff) wallOff.addEventListener('click', () => applyWallpaper('none'));
+
+/* обои поменяли в другой вкладке — подхватываем */
+window.addEventListener('storage', (e) => {
+  if (e.key !== WALL_KEY && e.key !== WALL_TONE_KEY) return;
+  const saved = readWallpaper();
+  wallPattern = saved.pattern;
+  wallTone = saved.tone;
+  if (wallPattern !== 'none') {
+    lastWallPattern = wallPattern;
+    ensureWallDefs();
+  }
+  paintWallpaper();
+});
+
 /* --------------------------------------------------------------- ключи */
 
 const STORE = (id) => `papuz.priv.${id}`;
@@ -450,7 +602,7 @@ function showApp() {
   refreshStats().then(fillProfile);
   loadNotifications();
   initReadQueue();
-  loadChats();
+  loadChats().catch(() => {});
   connectWs();
 }
 
@@ -674,18 +826,22 @@ function mergeMessages(chatId, incoming) {
 
 async function decryptPreviews() {
   const label = MEDIA_LABEL;
+  const pending = state.chats.filter((c) => c.lastMessage && !state.preview.has(c.id));
   let changed = false;
-  for (const c of state.chats) {
-    if (!c.lastMessage || state.preview.has(c.id)) continue;
-    if (c.lastMessage.media) {
-      state.preview.set(c.id, label[c.lastMessage.media] || 'Вложение');
+  /* по четыре чата за раз: длинный список не ждёт расшифровку по одному */
+  for (let i = 0; i < pending.length; i += 4) {
+    await Promise.all(pending.slice(i, i + 4).map(async (c) => {
+      if (state.preview.has(c.id)) return;
+      if (c.lastMessage.media) {
+        state.preview.set(c.id, label[c.lastMessage.media] || 'Вложение');
+        changed = true;
+        return;
+      }
+      if (!c.lastMessage.body) return;
+      const text = await plainOf(c.id, { id: `p${c.id}-${c.lastMessage.id}`, body: c.lastMessage.body });
+      state.preview.set(c.id, text);
       changed = true;
-      continue;
-    }
-    if (!c.lastMessage.body) continue;
-    const text = await plainOf(c.id, { id: `p${c.id}-${c.lastMessage.id}`, body: c.lastMessage.body });
-    state.preview.set(c.id, text);
-    changed = true;
+    }));
   }
   if (changed) scheduleRenderChats();
 }
@@ -795,6 +951,18 @@ function paintChatItem(btn, c, i, dmPeer) {
   const avKey = c.type === 'dm'
     ? `d|${dmPeer?.avatar || ''}|${dmPeer?.displayName || dmPeer?.username || c.title || ''}`
     : `g|${c.avatar || ''}|${c.title || ''}`;
+  const lm = c.lastMessage;
+  /* presence и сокет дёргают список часто: если у пункта ничего не
+     изменилось, не трогаем его DOM и не пересобираем предпросмотр */
+  const sig = [
+    c.id === state.activeId ? 1 : 0, c.type, c.title || '', c.avatar || '', c.members || 0,
+    Number(c.unread) || 0, state.preview.get(c.id) || '', avKey,
+    lm ? `${lm.id}|${lm.at}|${lm.kind || ''}|${lm.mine ? 1 : 0}|${lm.senderName || ''}|${lm.media || ''}|${lm.kind === 'system' ? (lm.body || '') : ''}` : '',
+    dmPeer ? `${dmPeer.online ? 1 : 0}|${dmPeer.lastSeen || 0}|${dmPeer.displayName || ''}|${dmPeer.username || ''}` : '',
+  ].join('\u0001');
+  if (btn._sig === sig) return;
+  btn._sig = sig;
+
   if (ui.avKey !== avKey) {
     ui.avKey = avKey;
     if (c.type === 'dm') avatarEl(ui.av, dmPeer || { displayName: c.title }, 'av-md');
@@ -915,20 +1083,95 @@ function applyComposerMode(chat) {
   else $('#msg-input').placeholder = 'Сообщение…';
 }
 
+/* «печатает…»: точки занимают своё место над композером, а не поверх сообщения */
+function setTyping(on) {
+  const el = $('#typing');
+  const list = $('#messages');
+  const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+  el.hidden = !on;
+  el.classList.toggle('on', on);
+  $('#chat-body').classList.toggle('typing-on', on);
+  if (on && nearBottom) requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
+}
+
+/* высота нижней панели: лента заканчивается над композером, поэтому
+   сообщения не выглядывают из-под стекла. Замеряем панель сразу после
+   показа чата, до прокрутки вниз. */
+function syncComposerHeight() {
+  const bar = [$('#composer'), $('#ch-sub')].find((el) => el && !el.hidden);
+  const h = bar ? Math.round(bar.getBoundingClientRect().height) : 0;
+  $('#chat-body').style.setProperty('--composer-h', h + 'px');
+  return h;
+}
+
+/* лента держится за низ, когда меняется высота окна, панели ввода или
+   адресной строки. Если человек читает историю выше, вниз не тянем. */
+let messagesAtBottom = true;
+
+{
+  const list = $('#messages');
+  const bars = [$('#composer'), $('#ch-sub')].filter(Boolean);
+  let raf = 0;
+  const measure = () => {
+    syncComposerHeight();
+    if (!messagesAtBottom) return;
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
+  };
+  const ro = new ResizeObserver(measure);
+  const mo = new MutationObserver(measure);
+  for (const el of bars) {
+    ro.observe(el);
+    mo.observe(el, { attributes: true, attributeFilter: ['hidden'] });
+  }
+  /* высота ленты меняется, когда браузер показывает/прячет адресную
+     строку или клавиатуру: внизу не должно оставаться недокрутки */
+  ro.observe(list);
+  measure();
+}
+
+/* сообщения чата грузим заранее: по касанию пункта списка и перед показом
+   самого чата. Одна и та же загрузка не запускается дважды. */
+const chatPrefetch = new Map();
+let openSeq = 0;
+let openingChatId = null;
+
+function loadChatMessages(chatId) {
+  if (state.messages.has(chatId)) return Promise.resolve();
+  const pending = chatPrefetch.get(chatId);
+  if (pending) return pending;
+  const p = api(`/api/chats/${chatId}/messages`)
+    .then(({ messages }) => {
+      state.messages.set(chatId, mergeMessages(chatId, messages));
+    })
+    .finally(() => chatPrefetch.delete(chatId));
+  chatPrefetch.set(chatId, p);
+  return p;
+}
+
+$('#chat-list').addEventListener('pointerdown', (e) => {
+  const item = e.target.closest('.chat-item[data-chat]');
+  if (!item) return;
+  loadChatMessages(Number(item.dataset.chat)).catch(() => {});
+}, { passive: true });
+
 async function openChat(chatId) {
+  const seq = ++openSeq;
+  const prevActive = state.activeId;
   state.activeId = chatId;
+  openingChatId = chatId;
   closeChatMore();
+
   const chat = state.chats.find((c) => c.id === chatId);
   const peer = state.peers.get(chatId) || chat?.peer || null;
   const isGroup = chat && chat.type !== 'dm';
 
-  $('#chat-empty').hidden = true;
-  $('#chat-body').hidden = false;
-  $('.shell').classList.add('chat-open');
+  /* на телефоне старый чат уезжает сразу: пока новый не готов, показываем
+     список, а не чужую переписку и не пустые обои */
+  if (prevActive && prevActive !== chatId) $('.shell').classList.remove('chat-open');
   /* при переходе в другой чат старый «печатает…» не должен висеть */
   clearTimeout(state.typingTimers.get('show'));
-  $('#typing').classList.remove('on');
-  $('#typing').hidden = true;
+  setTyping(false);
 
   if (isGroup) {
     groupAvatar($('#peer-avatar'), chat, 'av-sm');
@@ -949,14 +1192,23 @@ async function openChat(chatId) {
 
   scheduleRenderChats();
 
-  if (!state.messages.has(chatId)) {
-    const { messages } = await api(`/api/chats/${chatId}/messages`);
-    state.messages.set(chatId, mergeMessages(chatId, messages));
+  /* чат показываем только после того, как сообщения загружены и расшифрованы:
+     так нет ни пустых обоев, ни старых сообщений другого чата */
+  try {
+    await loadChatMessages(chatId);
+  } catch {
+    if (openingChatId === chatId) openingChatId = null;
+    if (seq === openSeq && state.activeId === chatId) toast('Не удалось загрузить сообщения');
+    return;
   }
-  /* пока грузили, могли открыть другой чат — старое сообщение сюда не рисуем */
-  if (state.activeId !== chatId) return;
-  await renderMessages(chatId);
-  if (state.activeId === chatId && !chat?.preview) markRead(chatId);
+  if (seq !== openSeq || state.activeId !== chatId) {
+    if (openingChatId === chatId) openingChatId = null;
+    return;
+  }
+
+  const shown = await renderMessages(chatId, { reveal: true });
+  if (openingChatId === chatId) openingChatId = null;
+  if (shown && seq === openSeq && state.activeId === chatId && !chat?.preview) markRead(chatId);
 }
 
 function updateGroupStatus(chat) {
@@ -1939,14 +2191,13 @@ function ticksEl(read) {
   return s;
 }
 
-function messageMeta(chatId, m) {
+function messageMeta(chatId, m, chat = state.chats.find((c) => c.id === chatId)) {
   const meta = document.createElement('span');
   meta.className = 'meta';
   const t = document.createElement('span');
   t.className = 'time';
   t.textContent = hhmm(m.at);
   meta.append(t);
-  const chat = state.chats.find((c) => c.id === chatId);
   if (isMine(m) && chat?.type === 'dm') meta.append(ticksEl((chat.peerRead || 0) >= m.id));
   return meta;
 }
@@ -1968,28 +2219,14 @@ function updateTicks(chatId) {
 let renderSeq = 0;
 let renderActiveChatId = null;
 
-async function renderMessages(chatId, { keepScroll = false } = {}) {
-  const token = ++renderSeq;
-  if (chatId !== state.activeId) return;
-  const wrap = $('#messages');
-  wrap.innerHTML = '';
-  const list = [...(state.messages.get(chatId) || [])];
-  const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
-  renderActiveChatId = chatId;
-  const texts = await Promise.all(list.map((m) => plainOf(chatId, m)));
-  if (token !== renderSeq || chatId !== state.activeId) {
-    if (token === renderSeq) renderActiveChatId = null;
-    return;
-  }
-  /* пока расшифровывали, прилетело новое сообщение — перерисовываем с ним */
-  const current = state.messages.get(chatId) || [];
-  if (current.length !== list.length || current.some((m, i) => m.id !== list[i].id)) {
-    return renderMessages(chatId, { keepScroll });
-  }
-
-  let lastDay = '';
-  let lastSender = null;
-  let lastTs = 0;
+/* собирает узлы сообщений в отдельный фрагмент: пока он готовится,
+   старое содержимое остаётся на экране и лента не пустеет */
+function messageNodes(chatId, list, texts, isChannelChat, seed = {}, animate = true) {
+  const frag = document.createDocumentFragment();
+  const chat = state.chats.find((c) => c.id === chatId);
+  let lastDay = seed.lastDay || '';
+  let lastSender = seed.lastSender ?? null;
+  let lastTs = seed.lastTs || 0;
 
   list.forEach((m, idx) => {
     if (isChannelChat && isChannelMemberNotice(m)) { lastSender = null; return; }
@@ -1998,7 +2235,7 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
       const d = document.createElement('div');
       d.className = 'msg-day';
       d.textContent = day;
-      wrap.append(d);
+      frag.append(d);
       lastDay = day;
       lastSender = null;
     }
@@ -2006,7 +2243,7 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
       const sys = document.createElement('div');
       sys.className = 'msg-system';
       sys.textContent = texts[idx] || m.body;
-      wrap.append(sys);
+      frag.append(sys);
       lastSender = null;
       return;
     }
@@ -2015,7 +2252,10 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
     const same = !isChannelChat && lastSender === m.senderId && m.at - lastTs < 5 * 60e3;
     el.className = `msg ${mine ? 'mine' : 'them'}${same ? ' same' : ''}`;
     el.dataset.id = String(m.id);
-    if (!mine) addSenderName(el, chatId, m);
+    /* пачку сообщений показываем сразу, без 280-мс проявления каждого пузыря:
+       при открытии чата и подгрузке истории это выглядело как «прогрузка» */
+    if (!animate) el.style.animation = 'none';
+    if (!mine) addSenderName(el, chatId, m, chat);
     const media = m.media || [];
     if (media.length) {
       el.classList.add('has-media');
@@ -2028,28 +2268,110 @@ async function renderMessages(chatId, { keepScroll = false } = {}) {
       fillMentions(t, texts[idx] || '');
       el.append(t);
     }
-    el.append(messageMeta(chatId, m));
-    wrap.append(el);
+    el.append(messageMeta(chatId, m, chat));
+    frag.append(el);
 
     lastSender = m.senderId;
     lastTs = m.at;
   });
-  renderActiveChatId = null;
-  if (!keepScroll) requestAnimationFrame(() => {
-    if (token !== renderSeq || chatId !== state.activeId) return;
-    wrap.scrollTop = wrap.scrollHeight;
-  });
+  return { frag, lastDay, lastSender, lastTs };
 }
 
-/* подгрузка истории при прокрутке вверх */
+async function renderMessages(chatId, { keepScroll = false, reveal = false } = {}) {
+  const token = ++renderSeq;
+  if (chatId !== state.activeId) return false;
+  const wrap = $('#messages');
+  const list = [...(state.messages.get(chatId) || [])];
+  const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
+  renderActiveChatId = chatId;
+  let texts;
+  try {
+    texts = await Promise.all(list.map((m) => plainOf(chatId, m)));
+  } catch {
+    if (token === renderSeq) renderActiveChatId = null;
+    return false;
+  }
+  if (token !== renderSeq || chatId !== state.activeId) {
+    if (token === renderSeq) renderActiveChatId = null;
+    return false;
+  }
+  /* пока расшифровывали, прилетело новое сообщение — перерисовываем с ним */
+  const current = state.messages.get(chatId) || [];
+  if (current.length !== list.length || current.some((m, i) => m.id !== list[i].id)) {
+    return renderMessages(chatId, { keepScroll, reveal });
+  }
+
+  /* старые узлы живут до последнего момента: сначала собираем новые,
+     затем одним махом заменяем — без пустой ленты и «прогрузки» */
+  const prevHeight = keepScroll ? wrap.scrollHeight : 0;
+  const prevTop = keepScroll ? wrap.scrollTop : 0;
+  const { frag } = messageNodes(chatId, list, texts, isChannelChat, {}, false);
+
+  if (reveal) {
+    $('#chat-empty').hidden = true;
+    $('#chat-body').hidden = false;
+    /* высоту композера меряем до прокрутки: низ ленты не должен
+       оказаться под кнопками */
+    syncComposerHeight();
+    $('.shell').classList.add('chat-open');
+  }
+
+  wrap.replaceChildren(frag);
+
+  if (keepScroll) {
+    wrap.scrollTop = prevTop + (wrap.scrollHeight - prevHeight);
+    messagesAtBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight <= 48;
+  } else {
+    /* сразу вниз, не ждём кадр: иначе на мгновение видно верх ленты */
+    messagesAtBottom = true;
+    wrap.scrollTop = wrap.scrollHeight;
+    requestAnimationFrame(() => {
+      if (token !== renderSeq || chatId !== state.activeId || !messagesAtBottom) return;
+      wrap.scrollTop = wrap.scrollHeight;
+    });
+  }
+  lastHistoryTop = wrap.scrollTop;
+  renderActiveChatId = null;
+  return true;
+}
+
+/* подгрузка истории при прокрутке вверх: старые сообщения вставляем
+   сверху, не перерисовывая всю ленту, и удерживаем позицию */
 let loadingOlder = false;
+let lastHistoryTop = 0;
 const noMoreHistory = new Set();
 
-$('#messages').addEventListener('scroll', async () => {
+let messagesScrollRaf = 0;
+$('#messages').addEventListener('scroll', () => {
+  /* прокрутка приходит чаще кадров: разбираем её один раз за кадр */
+  if (messagesScrollRaf) return;
+  messagesScrollRaf = requestAnimationFrame(() => {
+    messagesScrollRaf = 0;
+    onMessagesScroll();
+  });
+}, { passive: true });
+
+async function onMessagesScroll() {
   const wrap = $('#messages');
-  if (wrap.scrollTop > 90 || loadingOlder) return;
+  /* запоминаем, держится ли лента за низ: от этого зависит поведение
+     при изменении высоты окна и композера */
+  messagesAtBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight <= 48;
+  if (loadingOlder) return;
+  const top = wrap.scrollTop;
+  /* у самого верха пробуем снова даже без движения: так подгрузка
+     повторяется после обрыва связи. Дальше — только при движении вверх,
+     чтобы прыжок ленты вниз при открытии не считался прокруткой */
+  const up = top < lastHistoryTop - 2;
+  lastHistoryTop = top;
+  if (!up && top > 90) return;
+  /* начинаем заранее, за экран до верха: при быстром броске история
+     успевает прийти и не «подгружается» на глазах */
+  if (wrap.scrollHeight - wrap.clientHeight < 120) return;
+  if (top > Math.max(90, wrap.clientHeight * 1.5)) return;
   const chatId = state.activeId;
-  if (!chatId || noMoreHistory.has(chatId)) return;
+  if (!chatId || noMoreHistory.has(chatId) || renderActiveChatId === chatId) return;
+  /* лента ещё не нарисована — историю подхватит обычный рендер */
+  if (!wrap.querySelector('.msg')) return;
   const list = state.messages.get(chatId);
   if (!list?.length) return;
   loadingOlder = true;
@@ -2057,21 +2379,45 @@ $('#messages').addEventListener('scroll', async () => {
     const { messages } = await api(`/api/chats/${chatId}/messages?before=${list[0].id}`);
     if (!messages.length) {
       noMoreHistory.add(chatId);
-    } else {
-      const prevHeight = wrap.scrollHeight;
-      const prevTop = wrap.scrollTop;
-      state.messages.set(chatId, mergeMessages(chatId, messages));
-      await renderMessages(chatId, { keepScroll: true });
-      if (chatId !== state.activeId) return;
-      wrap.scrollTop = wrap.scrollHeight - prevHeight + prevTop;
+      return;
     }
+    if (chatId !== state.activeId) return;
+    const incoming = messages.map(normalizeMessage).sort((a, b) => a.id - b.id);
+    const texts = await Promise.all(incoming.map((m) => plainOf(chatId, m)));
+    if (chatId !== state.activeId || renderActiveChatId === chatId) return;
+    const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
+
+    const prevHeight = wrap.scrollHeight;
+    const prevTop = wrap.scrollTop;
+    const topLabel = wrap.firstElementChild?.classList.contains('msg-day') ? wrap.firstElementChild : null;
+    const oldFirst = wrap.querySelector('.msg[data-id]');
+    const oldFirstId = oldFirst ? Number(oldFirst.dataset.id) : 0;
+    const oldFirstMsg = oldFirstId
+      ? (state.messages.get(chatId) || []).find((m) => m.id === oldFirstId)
+      : null;
+    const dayAtTop = oldFirstMsg ? dayLabel(oldFirstMsg.at) : '';
+
+    state.messages.set(chatId, mergeMessages(chatId, incoming));
+    /* старые сообщения появляются сразу, без анимации: иначе при быстрой
+       прокрутке видно, как они «проявляются» */
+    const { frag, lastDay, lastSender, lastTs } = messageNodes(chatId, incoming, texts, isChannelChat, {}, false);
+    /* если старые и текущие сообщения одного дня, плашка дня уже стоит
+       на стыке — вторую не добавляем */
+    if (topLabel && dayAtTop && dayAtTop === lastDay) topLabel.remove();
+    wrap.prepend(frag);
+
+    if (oldFirst && oldFirstMsg && !isChannelChat) {
+      oldFirst.classList.toggle('same',
+        lastSender === oldFirstMsg.senderId && oldFirstMsg.at - lastTs < 5 * 60e3);
+    }
+    wrap.scrollTop = prevTop + (wrap.scrollHeight - prevHeight);
+    lastHistoryTop = wrap.scrollTop;
   } catch { /* не критично */ } finally {
     loadingOlder = false;
   }
-});
+}
 
-function addSenderName(el, chatId, m) {
-  const chat = state.chats.find((c) => c.id === chatId);
+function addSenderName(el, chatId, m, chat = state.chats.find((c) => c.id === chatId)) {
   if (!chat || chat.type === 'dm' || chat.type === 'channel') return;
   const list = state.members.get(chatId) || [];
   const sender = list.find((x) => x.id === m.senderId);
@@ -2093,18 +2439,31 @@ async function appendMessage(chatId, m) {
   if (list.some((x) => x.id === m.id)) return;
   const prev = list[list.length - 1];
   list.push(m);
-  const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
+  const chat = state.chats.find((c) => c.id === chatId);
+  const isChannelChat = chat?.type === 'channel';
   if (isChannelChat && isChannelMemberNotice(m)) return;
   const text = await plainOf(chatId, m);
   if (text) state.preview.set(chatId, text);
   const media = m.media || [];
   if (media.length && !text) state.preview.set(chatId, MEDIA_LABEL[media[0].kind] || 'Вложение');
   if (chatId !== state.activeId) return;
+  /* чат сейчас открывается — ленту целиком соберёт renderMessages */
+  if (openingChatId === chatId) return;
   /* сейчас идёт полный рендер этого чата — он сам подхватит новое сообщение */
   if (renderActiveChatId === chatId) return;
 
   const wrap = $('#messages');
   const nearBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 120;
+  /* новый день — новая плашка: без полного рендера она сама не появится */
+  const prevDay = prev ? dayLabel(prev.at) : '';
+  const day = dayLabel(m.at);
+  const newDay = day !== prevDay;
+  if (newDay) {
+    const d = document.createElement('div');
+    d.className = 'msg-day';
+    d.textContent = day;
+    wrap.append(d);
+  }
   if (m.kind === 'system') {
     const sys = document.createElement('div');
     sys.className = 'msg-system';
@@ -2117,10 +2476,10 @@ async function appendMessage(chatId, m) {
   }
   const el = document.createElement('div');
   const mine = !isChannelChat && isMine(m);
-  const grouped = !isChannelChat && prev && prev.senderId === m.senderId && m.at - prev.at < 5 * 60e3;
+  const grouped = !isChannelChat && !newDay && prev && prev.senderId === m.senderId && m.at - prev.at < 5 * 60e3;
   el.className = `msg ${mine ? 'mine' : 'them'}${grouped ? ' same' : ''}`;
   el.dataset.id = String(m.id);
-  if (!mine) addSenderName(el, chatId, m);
+  if (!mine) addSenderName(el, chatId, m, chat);
   if (media.length) {
     el.classList.add('has-media');
     if (media.length === 1 && media[0].kind === 'circle' && !text) el.classList.add('solo-circle');
@@ -2132,7 +2491,7 @@ async function appendMessage(chatId, m) {
     fillMentions(t, text || '');
     el.append(t);
   }
-  el.append(messageMeta(chatId, m));
+  el.append(messageMeta(chatId, m, chat));
   wrap.append(el);
   if (nearBottom || mine) {
     requestAnimationFrame(() => {
@@ -4330,10 +4689,8 @@ function connectWs() {
     if (msg.type === 'message') {
       const m = normalizeMessage(msg.message);
       if (!m || !m.chatId) return;
-      if (!state.messages.has(m.chatId)) {
-        loadChats().catch(() => {});
-        return;
-      }
+      /* чата может ещё не быть в списке — сообщение всё равно не теряем */
+      if (!state.chats.some((c) => c.id === m.chatId)) loadChats().catch(() => {});
       appendMessage(m.chatId, m).then(() => {
         const chat = state.chats.find((c) => c.id === m.chatId);
         if (!chat) return;
@@ -4393,14 +4750,9 @@ function connectWs() {
 
     if (msg.type === 'typing' && msg.chatId === state.activeId && msg.userId !== state.me.id
         && state.chats.find((c) => c.id === msg.chatId)?.type !== 'channel') {
-      const el = $('#typing');
-      el.hidden = false;
-      el.classList.add('on');
+      setTyping(true);
       clearTimeout(state.typingTimers.get('show'));
-      state.typingTimers.set('show', setTimeout(() => {
-        el.classList.remove('on');
-        el.hidden = true;
-      }, 2600));
+      state.typingTimers.set('show', () => setTyping(false), 2600);
     }
   });
 
@@ -4468,13 +4820,16 @@ function queueEmoji(node) {
   emojiQueued = true;
   requestAnimationFrame(() => {
     emojiQueued = false;
-    const list = [...emojiPending];
+    let list = [...emojiPending].filter((n) => n.isConnected && emojiAllowed(n) && !n.matches('img.emoji'));
     emojiPending.clear();
-    for (const n of list) {
-      if (!n.isConnected || !emojiAllowed(n)) continue;
-      if (n.matches('img.emoji')) continue;
-      paintEmoji(n);
+    /* если за кадр добавилась целая лента, разбираем общий контейнер
+       один раз, а не каждый пузырь по отдельности */
+    list = list.filter((n) => !list.some((other) => other !== n && other.contains(n)));
+    if (list.length > 6) {
+      const root = list[0].closest('#messages, #chat-list, .sheet-panel, .users-page, .aud-panel');
+      if (root && list.every((n) => root.contains(n))) list = [root];
     }
+    for (const n of list) paintEmoji(n);
   });
 }
 

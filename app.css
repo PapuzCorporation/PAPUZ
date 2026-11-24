@@ -121,6 +121,7 @@
   --mark-ink:#dfffc0;
   --mark-shadow:0 20px 50px -24px rgba(120,240,160,.6);
   --player-bg:linear-gradient(120deg,rgba(22,58,46,.94),rgba(11,26,20,.94));
+  --player-solid:#0b1a14;
   --player-line:rgba(140,240,200,.16);
   --player-shadow:0 18px 40px -32px #000;
   --player-title:#dbffef;
@@ -275,22 +276,12 @@ button{background:none;border:0;cursor:pointer}
 
 /* ---------------------------------------------------------------- фон */
 .bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg-grad)}
-.glow{position:absolute;border-radius:50%;opacity:var(--glow-opacity);will-change:transform;transform:translateZ(0)}
-.g1{width:70vmax;height:70vmax;left:-25vmax;top:-30vmax;
-  background:var(--glow-1);
-  animation:drift1 26s ease-in-out infinite alternate}
-.g2{width:60vmax;height:60vmax;right:-22vmax;bottom:-24vmax;
-  background:var(--glow-2);
-  animation:drift2 32s ease-in-out infinite alternate}
-.g3{width:44vmax;height:44vmax;left:38%;top:44%;
-  background:var(--glow-3);
-  animation:drift1 22s ease-in-out infinite alternate-reverse}
-@keyframes drift1{to{transform:translate3d(6vmax,4vmax,0) scale(1.08)}}
-@keyframes drift2{to{transform:translate3d(-5vmax,-4vmax,0) scale(1.1)}}
-/* на телефоне три больших фоновых слоя не двигаем: картинка та же, но без просадки FPS */
-@media (max-width:860px){
-  .glow{animation:none;will-change:auto;transform:none}
-}
+/* три больших слоя остаются на месте: картинка та же, но GPU не
+   перерисовывает их каждую секунду ни на телефоне, ни на компьютере */
+.glow{position:absolute;border-radius:50%;opacity:var(--glow-opacity)}
+.g1{width:70vmax;height:70vmax;left:-25vmax;top:-30vmax;background:var(--glow-1)}
+.g2{width:60vmax;height:60vmax;right:-22vmax;bottom:-24vmax;background:var(--glow-2)}
+.g3{width:44vmax;height:44vmax;left:38%;top:44%;background:var(--glow-3)}
 .grain{position:absolute;inset:0;opacity:var(--grain-opacity);
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
 
@@ -325,9 +316,8 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   font-size:clamp(3.2rem,12.5vw,4.6rem);line-height:.95;letter-spacing:.03em;
   background:var(--brand-grad);
   -webkit-background-clip:text;background-clip:text;color:transparent;
-  animation:sheen 9s ease-in-out infinite;background-size:100% 220%;
+  background-position:50% 0;background-size:100% 220%;
 }
-@keyframes sheen{0%,100%{background-position:50% 0}50%{background-position:50% 100%}}
 .brand-sub{margin:10px 0 0;color:var(--muted);font-size:13.5px;letter-spacing:.06em;text-transform:lowercase}
 .boot-text{margin:0;text-align:center;color:var(--muted);font-size:clamp(16px,4.4vw,19px);letter-spacing:.08em;text-transform:lowercase}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -469,17 +459,20 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .user-row-nick{font-size:12px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .user-row-bio{margin-top:2px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.chat-list{flex:1;min-height:0;min-width:0;overflow-y:auto;padding:4px 8px 8px;scrollbar-width:thin;overscroll-behavior:contain}
+.chat-list{flex:1;min-height:0;min-width:0;overflow-y:auto;padding:4px 8px 8px;scrollbar-width:thin;overscroll-behavior:contain;
+  contain:layout style}
 .chat-list::-webkit-scrollbar{width:6px}
 .chat-list::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:6px}
 
 .chat-item{
   display:flex;align-items:center;gap:11px;width:100%;min-width:0;padding:10px;border-radius:16px;text-align:left;
   transition:background .18s,transform .18s var(--ease);position:relative;
+  contain:layout style;
 }
 .chat-item.is-new{animation:itemIn .5s var(--ease) both;animation-delay:calc(var(--i,0) * 40ms)}
 @keyframes itemIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .chat-item:hover{background:var(--panel-2)}
+.chat-item:active{background:var(--panel-2);transform:scale(.99)}
 .chat-item.is-active{background:var(--active-grad);
   box-shadow:inset 0 0 0 1px var(--active-line)}
 .chat-item-body{flex:1;min-width:0}
@@ -590,11 +583,13 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .switch[data-busy]{opacity:.55;pointer-events:none}
 
 /* ---- верхний плеер ---- */
-.player{flex:none;display:flex;align-items:center;gap:10px;
+/* плеер висит над лентой, не занимая место в потоке: чат не сдвигается,
+   а обои продолжаются под ним — без отдельной полосы фона */
+.player{position:absolute;top:100%;left:0;right:0;display:flex;align-items:center;gap:10px;
   margin:8px max(12px, calc((100% - 880px) / 2)) 0;padding:7px 8px 7px 10px;border-radius:16px;
-  background:var(--player-bg);
+  background:var(--player-bg);background-color:var(--player-solid,#0b1a14);
   border:1px solid var(--player-line);box-shadow:var(--player-shadow);
-  animation:plIn .28s var(--ease) both;position:relative;z-index:6}
+  animation:plIn .28s var(--ease) both;z-index:6}
 @keyframes plIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 .p-toggle{width:36px;height:36px;flex:none;border-radius:50%;display:grid;place-items:center;
   color:var(--play-ink,var(--btn-ink));
@@ -614,14 +609,14 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .p-close .ico{width:14px;height:14px}
 
 .messages{flex:1;min-height:0;overflow-y:auto;padding:18px max(16px, calc((100% - 880px) / 2)) 8px;
-  display:flex;flex-direction:column;gap:3px;
-  scrollbar-width:thin;overscroll-behavior:contain}
+  display:flex;flex-direction:column;gap:3px;contain:layout style;
+  scrollbar-width:thin;overscroll-behavior:contain;overflow-anchor:none}
 .messages::-webkit-scrollbar{width:6px}
 .messages::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:6px}
 
 .msg{max-width:min(76%,540px);padding:8px 12px 7px;border-radius:18px;font-size:14.5px;line-height:1.42;
   word-wrap:break-word;overflow-wrap:anywhere;white-space:pre-wrap;
-  animation:msgIn .28s var(--ease) both;position:relative}
+  animation:msgIn .28s var(--ease) both;position:relative;contain:layout style}
 .msg:not(.same){margin-top:9px}
 @keyframes msgIn{from{opacity:0;transform:translateY(7px) scale(.99)}to{opacity:1;transform:none}}
 .msg.them{align-self:flex-start;color:var(--them-ink);border-bottom-left-radius:7px;
@@ -662,17 +657,25 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .typing span:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
 
+/* композер и служебные строки — над обоями: фон чата продолжается
+   под кнопками, а не обрывается белой полосой */
+.composer,.typing,.ch-sub{position:relative;z-index:1}
 .composer{display:flex;align-items:flex-end;gap:7px;
   padding:8px max(12px, calc((100% - 880px) / 2)) calc(8px + env(safe-area-inset-bottom))}
 .c-btn{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;
-  color:var(--c-btn-ink);background:var(--c-btn-bg);border:1px solid var(--c-btn-line);
+  color:var(--c-btn-ink);background:var(--glass-bg,var(--card-bg));border:1px solid var(--c-btn-line);
+  box-shadow:0 10px 24px -18px rgba(0,0,0,.55);
+  backdrop-filter:var(--glass-blur,blur(12px));-webkit-backdrop-filter:var(--glass-blur,blur(12px));
   transition:transform .16s var(--ease),background .2s,color .2s}
-.c-btn .ico{width:21px;height:21px}
+.c-btn .ico{width:21px;height:21px;pointer-events:none}
 .c-btn:active{transform:scale(.93);background:var(--c-btn-bg-active)}
-.c-btn[aria-expanded="true"]{color:var(--send-fg);background:var(--send-grad-press);border-color:var(--send-line-press)}
+.c-btn[aria-expanded="true"]{color:var(--send-fg);background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}
 .c-field{flex:1;min-width:0;display:flex;align-items:flex-end;padding:2px 4px 2px 15px;border-radius:22px;
-  background:var(--input-bg);border:1px solid var(--line);transition:border-color .2s,background .2s}
-.c-field:focus-within{border-color:var(--input-focus-line);background:var(--input-bg-focus)}
+  background:var(--glass-bg,var(--card-bg));border:1px solid var(--line);
+  box-shadow:0 10px 24px -18px rgba(0,0,0,.55);
+  backdrop-filter:var(--glass-blur,blur(12px));-webkit-backdrop-filter:var(--glass-blur,blur(12px));
+  transition:border-color .2s,background .2s}
+.c-field:focus-within{border-color:var(--input-focus-line);background:var(--glass-bg-focus,var(--input-bg-focus))}
 .c-field textarea{flex:1;min-width:0;resize:none!important;padding:9px 0;background:none;border:0;outline:none;
   max-height:132px;line-height:1.42;font-size:15px;color:var(--ink);font-family:inherit;
   overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;-webkit-appearance:none;appearance:none}
@@ -682,16 +685,17 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .send{
   position:relative;width:42px;height:42px;flex:none;border-radius:50%;
   display:grid;place-items:center;color:var(--send-fg);
-  background:var(--send-grad);border:1px solid var(--send-line);
-  box-shadow:var(--send-inset);
+  background:var(--send-grad),var(--glass-bg,var(--card-bg));border:1px solid var(--send-line);
+  backdrop-filter:var(--glass-blur,blur(12px));-webkit-backdrop-filter:var(--glass-blur,blur(12px));
+  box-shadow:var(--send-inset),0 10px 24px -18px rgba(0,0,0,.55);
   transition:transform .16s var(--ease),background .2s,border-color .2s,opacity .2s;
 }
-.send:active{transform:scale(.93);background:var(--send-grad-press);border-color:var(--send-line-press)}
+.send:active{transform:scale(.93);background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}
 .send .ico{width:21px;height:21px}
 .send.is-mic .ico{width:20px;height:20px}
 .send.is-circle .ico{width:20px;height:20px}
-.send[disabled]{opacity:.4;border-color:var(--send-line);background:var(--send-grad)}
-@media (hover:hover){.send:hover{background:var(--send-grad-press);border-color:var(--send-line-press)}}
+.send[disabled]{opacity:.4;border-color:var(--send-line);background:var(--send-grad),var(--glass-bg,var(--card-bg))}
+@media (hover:hover){.send:hover{background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}}
 
 /* подписка на канал вместо поля ввода, пока не подписан */
 .ch-sub{display:flex;align-items:center;justify-content:center;
@@ -705,7 +709,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   animation:fadeIn .28s ease both}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .sheet-panel{
-  position:relative;width:min(430px,100%);height:100%;overflow-y:auto;
+  position:relative;width:min(430px,100%);height:100%;overflow-y:auto;contain:layout style;
   background:var(--sheet-bg);
   border-left:1px solid var(--line);box-shadow:var(--sheet-shadow);
   animation:slideIn .42s var(--ease) both;
@@ -991,6 +995,215 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   --p-them:rgba(255,255,255,.16);--p-mine:#343434;--p-dot:#f0f0f0
 }
 
+/* --------------------------------------------------------- обои */
+/* Обои — это только фон переписки. Пузыри и служебные плашки
+   не перекрашиваются: при включённых обоях они становятся плотными
+   и сохраняют цвет темы, как в Telegram. */
+html[data-wall-tone="light"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.55), rgba(255,255,255,0) 62%),
+    linear-gradient(158deg,#c9c8f5 0%,#c2d9f5 44%,#c6eadf 100%);
+  /* на светлом фоне дудлы тёмные, иначе сливаются */
+  --wp-line:#33406a;
+  --wp-line-opacity:.24;
+  --wp-line-width:1.8;
+}
+/* «Тёмная» — нейтральная, без зелёного оттенка */
+html[data-wall-tone="dark"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(170,185,210,.10), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(120,140,180,.08), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#191c22 0%,#111318 55%,#0a0b0e 100%);
+  --wp-line:#e2e9f4;
+  --wp-line-opacity:.17;
+}
+/* «Как тема» — цвета выбранной темы */
+html[data-wall-tone="theme"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(80,170,125,.17), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(60,130,190,.11), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#0d1613 0%,#080e0c 55%,#060908 100%);
+  --wp-line:#d9f5e6;
+  --wp-line-opacity:.18;
+}
+html[data-wall-tone="theme"][data-theme="black"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(255,255,255,.055), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(255,255,255,.035), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#161616 0%,#0d0d0d 55%,#060606 100%);
+  --wp-line:#ededed;
+  --wp-line-opacity:.15;
+}
+html[data-wall-tone="theme"][data-theme="light"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.75), rgba(255,255,255,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(120,200,150,.16), rgba(120,200,150,0) 66%),
+    linear-gradient(158deg,#e9f3e3 0%,#dcebd9 48%,#cfe3d3 100%);
+  --wp-line:#2a563d;
+  --wp-line-opacity:.20;
+  --wp-line-width:1.8;
+}
+html[data-wall-tone="theme"][data-theme="copper"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(240,178,122,.15), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(190,110,70,.10), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#1b120c 0%,#120b07 55%,#0a0503 100%);
+  --wp-line:#f7e2c8;
+  --wp-line-opacity:.19;
+}
+html[data-wall-tone="theme"][data-theme="neon"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(219,109,245,.16), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(220,79,196,.11), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#171021 0%,#0e0916 55%,#07040d 100%);
+  --wp-line:#f3d8f8;
+  --wp-line-opacity:.17;
+}
+html[data-wall-tone="theme"][data-theme="ocean"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(109,229,245,.15), rgba(0,0,0,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(79,171,220,.12), rgba(0,0,0,0) 66%),
+    linear-gradient(160deg,#0b1c28 0%,#06121b 55%,#030a10 100%);
+  --wp-line:#d8f4ff;
+  --wp-line-opacity:.17;
+}
+html[data-wall-tone="theme"][data-theme="sakura"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 12% 0%, rgba(255,255,255,.75), rgba(255,255,255,0) 62%),
+    radial-gradient(90% 70% at 92% 100%, rgba(230,150,180,.16), rgba(230,150,180,0) 66%),
+    linear-gradient(158deg,#fdf1f6 0%,#f7e4ec 48%,#f1d8e3 100%);
+  --wp-line:#4f1c30;
+  --wp-line-opacity:.28;
+  --wp-line-width:1.8;
+}
+html[data-wall-tone="theme"][data-theme="simple"]{
+  --wp-grad:
+    radial-gradient(120% 90% at 14% 0%, rgba(255,255,255,.05), rgba(0,0,0,0) 62%),
+    linear-gradient(160deg,#1c1c1c 0%,#141414 55%,#0d0d0d 100%);
+  --wp-line:#e8e8e8;
+  --wp-line-opacity:.14;
+}
+html[data-wall-tone="colorful"]{
+  --wp-grad:
+    radial-gradient(100% 70% at 16% 0%, rgba(255,255,255,.28), rgba(255,255,255,0) 60%),
+    linear-gradient(150deg,#b7d9f2 0%,#c9c3f2 30%,#e6b9e8 55%,#ffc9c4 78%,#ffe2b8 100%);
+  --wp-line:#54344c;
+  --wp-line-opacity:.23;
+  --wp-line-width:1.8;
+}
+
+/* плотные цвета плашек: те же, что тема даёт на своём фоне */
+:root{--them-solid:#161a1b;--day-solid:#060908;--system-solid:#060908}
+html[data-theme="black"]{--them-solid:#0d0d0d;--day-solid:#0b0b0b;--system-solid:#0b0b0b}
+html[data-theme="copper"]{--them-solid:#1d1711;--day-solid:#0a0604;--system-solid:#0a0604}
+html[data-theme="neon"]{--them-solid:#17151e;--day-solid:#050409;--system-solid:#050409}
+html[data-theme="ocean"]{--them-solid:#141b21;--day-solid:#03080d;--system-solid:#03080d}
+html[data-theme="light"]{--them-solid:linear-gradient(180deg,#fff,#f4f8f2);--day-solid:#e7ede5;--system-solid:#e7ede5}
+html[data-theme="sakura"]{--them-solid:linear-gradient(180deg,#fff,#f8f2f5);--day-solid:#f2e8ec;--system-solid:#f2e8ec}
+html[data-theme="simple"]{--them-solid:#202020;--day-solid:#1e1e1e;--system-solid:#1e1e1e}
+
+/* слой обоев: фиксированный фон под сообщениями */
+.chat-scroll{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.chat-scroll > .messages{flex:1;min-height:0}
+.chat-wall{position:absolute;inset:0;z-index:0;display:none;overflow:hidden;background:var(--wp-grad);contain:strict}
+.wall-svg{position:absolute;inset:0;display:block;width:100%;height:100%}
+.wall-rect{fill:none}
+.wp-sprite{position:absolute;width:0;height:0;overflow:hidden}
+.wp-doodles{fill:none;stroke:var(--wp-line);stroke-width:var(--wp-line-width,1.6);stroke-linecap:round;stroke-linejoin:round;opacity:var(--wp-line-opacity)}
+html[data-wallpaper] .chat-wall{display:block}
+html[data-wallpaper] .messages{position:relative;z-index:1;background:transparent}
+
+/* пузыри и плашки не зависят от обоев */
+html[data-wallpaper] .messages{
+  --them-bg:var(--them-solid);
+  --day-bg:var(--day-solid);
+  --system-bg:var(--system-solid);
+}
+
+/* --- узоры: слой задаётся через fill, поэтому цвет и прозрачность
+   линий берутся из тона --- */
+html[data-wallpaper="cosmos"] .wall-rect{fill:url(#wp-cosmos)}
+html[data-wallpaper="games"] .wall-rect{fill:url(#wp-games)}
+html[data-wallpaper="nature"] .wall-rect{fill:url(#wp-nature)}
+html[data-wallpaper="music"] .wall-rect{fill:url(#wp-music)}
+html[data-wallpaper="food"] .wall-rect{fill:url(#wp-food)}
+html[data-wallpaper="animals"] .wall-rect{fill:url(#wp-animals)}
+html[data-wallpaper="travel"] .wall-rect{fill:url(#wp-travel)}
+html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
+
+/* --- секция в «Оформлении» --- */
+.wall-section{margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+.wall-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.wall-title{margin:0 0 2px;font-size:15px;font-weight:500;letter-spacing:-.01em;color:var(--ink)}
+.wall-sub{margin:0;font-size:11.5px;color:var(--muted-2)}
+.wall-off{
+  flex:none;padding:6px 10px;border-radius:9px;font-size:11.5px;color:var(--muted);
+  background:var(--panel);border:1px solid var(--line);
+  transition:color .18s,background .18s,transform .16s var(--ease);
+}
+.wall-off:hover{color:var(--ink);background:var(--panel-2)}
+.wall-off:active{transform:scale(.96)}
+.wall-off[hidden]{display:none}
+.wall-tones{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0 0 11px}
+.wall-tone{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:11px;
+  font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);
+  text-align:left;transition:color .18s,background .18s,border-color .18s,transform .16s var(--ease);
+}
+.wall-tone:hover{background:var(--panel-2)}
+.wall-tone:active{transform:scale(.985)}
+.wall-tone.is-active{
+  color:var(--ink);border-color:var(--accent-line);background:var(--accent-soft-3);
+  box-shadow:0 0 0 1px var(--accent-line);
+}
+.wall-tone-dot{
+  width:15px;height:15px;flex:none;border-radius:50%;
+  border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.25);
+}
+[data-tone-dot="light"]{background:linear-gradient(135deg,#c9c8f5,#c2d9f5 50%,#c6eadf)}
+[data-tone-dot="dark"]{background:linear-gradient(135deg,#2a2e35,#0b0c0f)}
+[data-tone-dot="theme"]{background:
+  radial-gradient(circle at 72% 28%,var(--mint),transparent 58%),
+  radial-gradient(circle at 28% 74%,var(--lime),transparent 60%),
+  var(--bg)}
+[data-tone-dot="colorful"]{background:conic-gradient(from 210deg,#b7d9f2,#c9c3f2,#e6b9e8,#ffc9c4,#ffe2b8,#b7d9f2)}
+
+.wall-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:2px}
+.wall-card{
+  display:flex;flex-direction:column;gap:6px;padding:5px;border-radius:14px;text-align:left;
+  background:var(--panel);border:1px solid var(--line);
+  transition:background .18s,border-color .18s,transform .16s var(--ease);
+}
+.wall-card:hover{background:var(--panel-2)}
+.wall-card:active{transform:scale(.985)}
+.wall-card.is-active{border-color:var(--accent-line);
+  box-shadow:0 0 0 1px var(--accent-line),0 10px 22px -20px rgba(0,0,0,.8)}
+.wall-prev{
+  position:relative;display:block;aspect-ratio:300/158;border-radius:11px;overflow:hidden;
+  border:1px solid var(--line);background:var(--wp-grad);
+}
+/* узор — заранее нарисованная маска: не перерисовывается при каждом открытии
+   и выглядит одинаково на любом экране */
+.wall-prev::before{
+  content:"";position:absolute;inset:0;
+  background:var(--wp-line);opacity:var(--wp-line-opacity);
+  -webkit-mask-image:var(--wp-mask);mask-image:var(--wp-mask);
+  -webkit-mask-size:100% 100%;mask-size:100% 100%;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+}
+.wall-card.is-active .wall-prev::after{
+  content:"";position:absolute;right:6px;top:6px;z-index:2;
+  width:18px;height:18px;border-radius:50%;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.2 4.3L19 6.8' fill='none' stroke='%230b1a12' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/11px 11px no-repeat,
+    #fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.28);
+  animation:themeCheck .18s var(--ease) both;
+}
+.wall-name{font-size:12px;line-height:1.2;color:var(--ink);padding:0 2px 1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wall-hint{margin:10px 0 0;font-size:11px;line-height:1.45;color:var(--muted-2)}
+
 /* ------------------------------------------------------- группы */
 .av.grp{background:var(--grp-grad);
   border:1px solid var(--grp-line);color:var(--grp-ink);font-weight:500;letter-spacing:.02em}
@@ -1070,15 +1283,16 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   opacity:0;transition:opacity .35s ease}
 .media-img img.on{opacity:1}
 .media-img .ph{position:absolute;inset:0;background:var(--shimmer);
-  background-size:200% 100%;animation:shimmer 1.4s linear infinite}
-@keyframes shimmer{to{background-position:-200% 0}}
+  animation:shimmerPulse 1.4s ease-in-out infinite}
+/* мягкое дыхание вместо перерисовки градиента каждую секунду */
+@keyframes shimmerPulse{0%,100%{opacity:.55}50%{opacity:1}}
 
 /* ---- видео с собственным плеером ---- */
 .media-video{position:relative;border-radius:14px;overflow:hidden;background:var(--video-bg);line-height:0;
   width:min(74vw,420px);max-width:100%}
 .media-video:not(.ready)::before{content:"";position:absolute;inset:0;z-index:0;
   background:var(--shimmer-soft);
-  background-size:200% 100%;animation:shimmer 1.4s linear infinite}
+  animation:shimmerPulse 1.4s ease-in-out infinite}
 .media-video video{display:block;width:100%;height:100%;object-fit:cover;background:#000;
   opacity:0;transition:opacity .3s ease}
 .media-video.ready video{opacity:1}
@@ -1341,13 +1555,26 @@ body.rec-voice .composer{opacity:0;pointer-events:none}
   .side{border-right:0;width:100%;max-width:100%;overflow-x:clip}
   .chat{position:fixed;top:var(--app-top,0);left:0;right:0;height:100%;height:100dvh;height:var(--app-h,100dvh);
     z-index:30;background:var(--chat-mobile-bg);
-    transform:translateX(100%);transition:transform .34s var(--ease);will-change:transform}
+    transform:translateX(100%);transition:transform .34s var(--ease)}
   .shell.chat-open .chat{transform:none}
   .back{display:grid}
   .chat-empty{display:none}
   .messages{padding:14px 12px 6px}
   .msg{max-width:82%}
 }
+
+/* ---- лента заканчивается над плавающим композером: сообщения не
+   выглядывают из-под стекла и не режутся пополам, когда панель ввода
+   меняет высоту или браузер прячет адресную строку ---- */
+html .chat-scroll{display:block}
+html .chat-scroll > .messages{position:absolute;inset:0 0 var(--composer-h,68px) 0;
+  padding-bottom:8px}
+html #chat-body.typing-on .messages{padding-bottom:24px}
+html .composer{position:absolute;left:0;right:0;bottom:0;z-index:2}
+html .typing{position:absolute;left:0;right:0;bottom:var(--composer-h,68px);z-index:2}
+html .ch-sub{position:absolute;left:0;right:0;bottom:0;z-index:2}
+html .attach-menu{bottom:calc(var(--composer-h,68px) + 8px)}
+html .uploads{bottom:calc(var(--composer-h,68px) + 10px)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;
     transition-property:none!important}
@@ -1391,6 +1618,7 @@ html[data-theme="black"]{
   --active-line:rgba(195,245,109,.16);
 
   --player-bg:linear-gradient(120deg,rgba(14,32,25,.96),rgba(4,10,7,.96));
+  --player-solid:#040e08;
   --player-line:rgba(140,240,200,.14);
   --player-close-bg:rgba(255,255,255,.08);
   --glass-hover:rgba(255,255,255,.08);
@@ -1469,6 +1697,9 @@ html[data-theme="light"]{
   --wordmark-grad:linear-gradient(180deg,#0d5b3c,#3aa571);
 
   --card-bg:linear-gradient(180deg,#ffffff,#f9fcf8);
+  --glass-bg:rgba(255,255,255,.34);
+  --glass-bg-focus:rgba(255,255,255,.50);
+  --glass-blur:blur(16px) brightness(1.42) saturate(1.05);
   --switch-knob:#fff;
   --switch-knob-shadow:0 1px 2px rgba(20,55,38,.28);
   --play-bg:linear-gradient(135deg,#63cf94,#1f9c68);
@@ -1540,6 +1771,7 @@ html[data-theme="light"]{
   --mark-ink:#1c5a3a;
   --mark-shadow:0 18px 40px -24px rgba(40,150,95,.4);
   --player-bg:linear-gradient(120deg,rgba(226,246,232,.98),rgba(210,240,224,.98));
+  --player-solid:#d2f0e0;
   --player-line:rgba(40,140,95,.22);
   --player-shadow:0 14px 30px -26px rgba(20,60,40,.5);
   --player-title:#16402e;
@@ -1748,6 +1980,7 @@ html[data-theme="copper"]{
   --mark-ink:#ffe2c4;
   --mark-shadow:0 20px 50px -24px rgba(220,130,60,.45);
   --player-bg:linear-gradient(120deg,rgba(52,30,18,.95),rgba(24,14,9,.95));
+  --player-solid:#180e09;
   --player-line:rgba(240,178,122,.18);
   --player-title:#ffe6cc;
   --player-track:rgba(255,235,215,.16);
@@ -1969,6 +2202,7 @@ html[data-theme="neon"]{
   --mark-ink:#f5c0ff;
   --mark-shadow:0 20px 50px -24px rgba(240,120,230,0.6);
   --player-bg:linear-gradient(120deg,rgba(50,25,75,.95),rgba(20,10,30,.95));
+  --player-solid:#140a1e;
   --player-line:rgba(240,140,224,0.16);
   --player-shadow:0 18px 40px -32px #000;
   --player-title:#ffdbfa;
@@ -2218,6 +2452,7 @@ html[data-theme="ocean"]{
   --mark-ink:#c0f6ff;
   --mark-shadow:0 20px 50px -24px rgba(120,205,240,0.6);
   --player-bg:linear-gradient(120deg,rgba(22,45,58,0.94),rgba(11,21,26,0.94));
+  --player-solid:#0b151a;
   --player-line:rgba(140,206,240,0.16);
   --player-shadow:0 18px 40px -32px #000;
   --player-title:#dbf3ff;
@@ -2389,6 +2624,9 @@ html[data-theme="sakura"]{
   --wordmark-grad:linear-gradient(180deg,#5b0d2a,#a53a64);
 
   --card-bg:linear-gradient(180deg,#ffffff,#fcf8fa);
+  --glass-bg:rgba(255,251,253,.34);
+  --glass-bg-focus:rgba(255,252,254,.50);
+  --glass-blur:blur(16px) brightness(1.42) saturate(1.05);
   --switch-knob:#fff;
   --switch-knob-shadow:0 1px 2px rgba(70,18,38,.3);
   --play-bg:linear-gradient(135deg,#dc5b9f,#a9275c);
@@ -2460,6 +2698,7 @@ html[data-theme="sakura"]{
   --mark-ink:#5a1c34;
   --mark-shadow:0 18px 40px -24px rgba(150,40,83,0.4);
   --player-bg:linear-gradient(120deg,rgba(246,226,234,0.98),rgba(240,210,222,0.98));
+  --player-solid:#f0d2de;
   --player-line:rgba(140,40,79,0.22);
   --player-shadow:0 14px 30px -26px rgba(60,20,36,0.5);
   --player-title:#401626;
@@ -2686,6 +2925,7 @@ html[data-theme="simple"]{
   --mark-ink:#ededed;
   --mark-shadow:0 18px 40px -24px rgba(0,0,0,.65);
   --player-bg:#222222;
+  --player-solid:#222222;
   --player-line:rgba(255,255,255,.13);
   --player-shadow:0 14px 30px -26px rgba(0,0,0,.8);
   --player-title:#f0f0f0;
@@ -2847,4 +3087,45 @@ img,a{-webkit-user-drag:none}
 img.emoji{
   width:1.15em;height:1.15em;margin:0 .04em;vertical-align:-.19em;
   display:inline-block;pointer-events:none;
+}
+
+/* ------------------------------------ светлые обои в тёмных темах
+   На белых и радужных обоях прозрачное стекло сливается с фоном.
+   Только для этих тонов возвращаем плотное тёмное стекло композера
+   и кнопок; на тёмных и «как тема» обоях остаётся прежнее светлое. */
+html[data-theme="dark"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(5,12,9,.78);
+  --glass-bg-focus:rgba(4,10,8,.88);
+  --glass-blur:blur(16px) saturate(1.08);
+  --glass-muted:var(--muted);
+}
+html[data-theme="black"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(0,0,0,.78);
+  --glass-bg-focus:rgba(0,0,0,.90);
+  --glass-blur:blur(16px) saturate(1.02);
+  --glass-muted:var(--muted);
+}
+html[data-theme="copper"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(17,10,6,.78);
+  --glass-bg-focus:rgba(14,8,5,.88);
+  --glass-blur:blur(16px) saturate(1.08);
+  --glass-muted:var(--muted);
+}
+html[data-theme="neon"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(11,6,18,.78);
+  --glass-bg-focus:rgba(9,5,15,.88);
+  --glass-blur:blur(16px) saturate(1.1);
+  --glass-muted:var(--muted);
+}
+html[data-theme="ocean"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(3,10,16,.78);
+  --glass-bg-focus:rgba(2,8,13,.88);
+  --glass-blur:blur(16px) saturate(1.08);
+  --glass-muted:var(--muted);
+}
+html[data-theme="simple"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
+  --glass-bg:rgba(14,14,14,.80);
+  --glass-bg-focus:rgba(10,10,10,.90);
+  --glass-blur:blur(16px) saturate(1.02);
+  --glass-muted:var(--muted);
 }

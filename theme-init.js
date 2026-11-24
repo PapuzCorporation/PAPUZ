@@ -11,5 +11,17 @@
     };
     var m = document.querySelector('meta[name="theme-color"]');
     if (m) m.setAttribute('content', c[t]);
+
+    var patterns = ['cosmos', 'games', 'nature', 'music', 'food', 'animals', 'travel', 'party'];
+    var legacy = { dots: 'cosmos', waves: 'nature', grid: 'games', diag: 'music', rings: 'food', plaid: 'travel', zigzag: 'party', aurora: 'cosmos' };
+    var wp = localStorage.getItem('papuz-wallpaper') || 'none';
+    if (legacy[wp]) wp = legacy[wp];
+    if (wp !== 'none' && patterns.indexOf(wp) < 0) wp = 'none';
+    if (wp !== 'none') document.documentElement.dataset.wallpaper = wp;
+
+    var tones = ['light', 'dark', 'theme', 'colorful'];
+    var wt = localStorage.getItem('papuz-wall-tone') || 'theme';
+    if (tones.indexOf(wt) < 0) wt = 'theme';
+    document.documentElement.dataset.wallTone = wt;
   } catch (e) { /* приватный режим */ }
 })();
