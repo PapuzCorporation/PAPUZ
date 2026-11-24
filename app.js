@@ -1,6 +1,6 @@
 /* PAPUZ — клиент */
-import * as K from './crypto.js';
-import * as M from './media.js';
+import * as K from './crypto.js?v=129o';
+import * as M from './media.js?v=129o';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -241,7 +241,6 @@ function ensureSnow() {
   for (let i = 0; i < 32; i++) {
     const near = Math.random() < 0.2;
     const flake = document.createElement('i');
-    const dot = document.createElement('b');
     const size = near ? (3.4 + Math.random() * 2.2) : (1.2 + Math.random() * 2.2);
     flake.style.left = (Math.random() * 100).toFixed(2) + '%';
     flake.style.width = size.toFixed(2) + 'px';
@@ -249,10 +248,16 @@ function ensureSnow() {
     flake.style.opacity = (near ? 0.2 + Math.random() * 0.2 : 0.3 + Math.random() * 0.45).toFixed(2);
     flake.style.animationDuration = (near ? 8 + Math.random() * 6 : 12 + Math.random() * 14).toFixed(1) + 's';
     flake.style.animationDelay = (-Math.random() * 24).toFixed(1) + 's';
-    flake.style.setProperty('--drift', (Math.random() * 90 - 45).toFixed(0) + 'px');
-    dot.style.animationDuration = (2.6 + Math.random() * 3.8).toFixed(1) + 's';
-    dot.style.animationDelay = (-Math.random() * 6).toFixed(1) + 's';
-    flake.append(dot);
+    /* один слой и одна анимация на снежинку: раньше внутри каждой
+       крутилась вторая анимация и висел box-shadow */
+    const drift = Math.random() * 90 - 45;
+    const cycles = 3 + Math.random() * 4;
+    const amp = near ? 3.5 : 5.5;
+    for (let k = 1; k <= 8; k++) {
+      const t = k / 8;
+      const x = drift * t + Math.sin(t * Math.PI * 2 * cycles) * amp * (1 - t * 0.15);
+      flake.style.setProperty(`--x${k}`, x.toFixed(1) + 'px');
+    }
     layer.append(flake);
   }
   snowBuilt = true;
@@ -334,6 +339,34 @@ function readWallpaper() {
   return { pattern, tone };
 }
 
+/* спрайт узоров весит больше половины index.html: грузим его только
+   когда обои действительно включены, а не на каждом открытии сайта */
+const WALL_SPRITE_URL = '/walls.svg?v=129o';
+let wallDefsState = 0;
+let wallDefsWaiters = [];
+function ensureWallDefs() {
+  if (wallDefsState === 2) return Promise.resolve();
+  if (wallDefsState === 1) return new Promise((res) => wallDefsWaiters.push(res));
+  wallDefsState = 1;
+  const done = () => {
+    wallDefsState = 2;
+    for (const res of wallDefsWaiters.splice(0)) res();
+  };
+  return fetch(WALL_SPRITE_URL, { credentials: 'same-origin' })
+    .then((r) => (r.ok ? r.text() : Promise.reject(new Error('walls'))))
+    .then((text) => {
+      const tpl = document.createElement('template');
+      tpl.innerHTML = text;
+      document.body.append(tpl.content);
+      done();
+    })
+    .catch(() => {
+      /* без спрайта остаются градиент и превью: сайт не ломается */
+      wallDefsState = 0;
+      done();
+    });
+}
+
 function paintWallpaper() {
   const html = document.documentElement;
   if (wallPattern === 'none') delete html.dataset.wallpaper;
@@ -369,7 +402,10 @@ function paintWallpaper() {
 function applyWallpaper(pattern, tone = wallTone, persist = true) {
   if (pattern !== 'none' && !WALLPAPERS.includes(pattern)) pattern = 'none';
   if (!WALL_TONES.includes(tone)) tone = 'theme';
-  if (pattern !== 'none') lastWallPattern = pattern;
+  if (pattern !== 'none') {
+    lastWallPattern = pattern;
+    ensureWallDefs();
+  }
   wallPattern = pattern;
   wallTone = tone;
   if (persist) {
@@ -385,7 +421,10 @@ function applyWallpaper(pattern, tone = wallTone, persist = true) {
   const saved = readWallpaper();
   wallPattern = saved.pattern;
   wallTone = saved.tone;
-  if (wallPattern !== 'none') lastWallPattern = wallPattern;
+  if (wallPattern !== 'none') {
+    lastWallPattern = wallPattern;
+    ensureWallDefs();
+  }
   paintWallpaper();
 }
 
@@ -409,7 +448,10 @@ window.addEventListener('storage', (e) => {
   const saved = readWallpaper();
   wallPattern = saved.pattern;
   wallTone = saved.tone;
-  if (wallPattern !== 'none') lastWallPattern = wallPattern;
+  if (wallPattern !== 'none') {
+    lastWallPattern = wallPattern;
+    ensureWallDefs();
+  }
   paintWallpaper();
 });
 
@@ -789,18 +831,22 @@ function mergeMessages(chatId, incoming) {
 
 async function decryptPreviews() {
   const label = MEDIA_LABEL;
+  const pending = state.chats.filter((c) => c.lastMessage && !state.preview.has(c.id));
   let changed = false;
-  for (const c of state.chats) {
-    if (!c.lastMessage || state.preview.has(c.id)) continue;
-    if (c.lastMessage.media) {
-      state.preview.set(c.id, label[c.lastMessage.media] || 'Вложение');
+  /* по четыре чата за раз: длинный список не ждёт расшифровку по одному */
+  for (let i = 0; i < pending.length; i += 4) {
+    await Promise.all(pending.slice(i, i + 4).map(async (c) => {
+      if (state.preview.has(c.id)) return;
+      if (c.lastMessage.media) {
+        state.preview.set(c.id, label[c.lastMessage.media] || 'Вложение');
+        changed = true;
+        return;
+      }
+      if (!c.lastMessage.body) return;
+      const text = await plainOf(c.id, { id: `p${c.id}-${c.lastMessage.id}`, body: c.lastMessage.body });
+      state.preview.set(c.id, text);
       changed = true;
-      continue;
-    }
-    if (!c.lastMessage.body) continue;
-    const text = await plainOf(c.id, { id: `p${c.id}-${c.lastMessage.id}`, body: c.lastMessage.body });
-    state.preview.set(c.id, text);
-    changed = true;
+    }));
   }
   if (changed) scheduleRenderChats();
 }
@@ -910,6 +956,18 @@ function paintChatItem(btn, c, i, dmPeer) {
   const avKey = c.type === 'dm'
     ? `d|${dmPeer?.avatar || ''}|${dmPeer?.displayName || dmPeer?.username || c.title || ''}`
     : `g|${c.avatar || ''}|${c.title || ''}`;
+  const lm = c.lastMessage;
+  /* presence и сокет дёргают список часто: если у пункта ничего не
+     изменилось, не трогаем его DOM и не пересобираем предпросмотр */
+  const sig = [
+    c.id === state.activeId ? 1 : 0, c.type, c.title || '', c.avatar || '', c.members || 0,
+    Number(c.unread) || 0, state.preview.get(c.id) || '', avKey,
+    lm ? `${lm.id}|${lm.at}|${lm.kind || ''}|${lm.mine ? 1 : 0}|${lm.senderName || ''}|${lm.media || ''}|${lm.kind === 'system' ? (lm.body || '') : ''}` : '',
+    dmPeer ? `${dmPeer.online ? 1 : 0}|${dmPeer.lastSeen || 0}|${dmPeer.displayName || ''}|${dmPeer.username || ''}` : '',
+  ].join('\u0001');
+  if (btn._sig === sig) return;
+  btn._sig = sig;
+
   if (ui.avKey !== avKey) {
     ui.avKey = avKey;
     if (c.type === 'dm') avatarEl(ui.av, dmPeer || { displayName: c.title }, 'av-md');
@@ -2138,14 +2196,13 @@ function ticksEl(read) {
   return s;
 }
 
-function messageMeta(chatId, m) {
+function messageMeta(chatId, m, chat = state.chats.find((c) => c.id === chatId)) {
   const meta = document.createElement('span');
   meta.className = 'meta';
   const t = document.createElement('span');
   t.className = 'time';
   t.textContent = hhmm(m.at);
   meta.append(t);
-  const chat = state.chats.find((c) => c.id === chatId);
   if (isMine(m) && chat?.type === 'dm') meta.append(ticksEl((chat.peerRead || 0) >= m.id));
   return meta;
 }
@@ -2171,6 +2228,7 @@ let renderActiveChatId = null;
    старое содержимое остаётся на экране и лента не пустеет */
 function messageNodes(chatId, list, texts, isChannelChat, seed = {}, animate = true) {
   const frag = document.createDocumentFragment();
+  const chat = state.chats.find((c) => c.id === chatId);
   let lastDay = seed.lastDay || '';
   let lastSender = seed.lastSender ?? null;
   let lastTs = seed.lastTs || 0;
@@ -2202,7 +2260,7 @@ function messageNodes(chatId, list, texts, isChannelChat, seed = {}, animate = t
     /* пачку сообщений показываем сразу, без 280-мс проявления каждого пузыря:
        при открытии чата и подгрузке истории это выглядело как «прогрузка» */
     if (!animate) el.style.animation = 'none';
-    if (!mine) addSenderName(el, chatId, m);
+    if (!mine) addSenderName(el, chatId, m, chat);
     const media = m.media || [];
     if (media.length) {
       el.classList.add('has-media');
@@ -2215,7 +2273,7 @@ function messageNodes(chatId, list, texts, isChannelChat, seed = {}, animate = t
       fillMentions(t, texts[idx] || '');
       el.append(t);
     }
-    el.append(messageMeta(chatId, m));
+    el.append(messageMeta(chatId, m, chat));
     frag.append(el);
 
     lastSender = m.senderId;
@@ -2288,7 +2346,17 @@ let loadingOlder = false;
 let lastHistoryTop = 0;
 const noMoreHistory = new Set();
 
-$('#messages').addEventListener('scroll', async () => {
+let messagesScrollRaf = 0;
+$('#messages').addEventListener('scroll', () => {
+  /* прокрутка приходит чаще кадров: разбираем её один раз за кадр */
+  if (messagesScrollRaf) return;
+  messagesScrollRaf = requestAnimationFrame(() => {
+    messagesScrollRaf = 0;
+    onMessagesScroll();
+  });
+}, { passive: true });
+
+async function onMessagesScroll() {
   const wrap = $('#messages');
   /* запоминаем, держится ли лента за низ: от этого зависит поведение
      при изменении высоты окна и композера */
@@ -2352,10 +2420,9 @@ $('#messages').addEventListener('scroll', async () => {
   } catch { /* не критично */ } finally {
     loadingOlder = false;
   }
-});
+}
 
-function addSenderName(el, chatId, m) {
-  const chat = state.chats.find((c) => c.id === chatId);
+function addSenderName(el, chatId, m, chat = state.chats.find((c) => c.id === chatId)) {
   if (!chat || chat.type === 'dm' || chat.type === 'channel') return;
   const list = state.members.get(chatId) || [];
   const sender = list.find((x) => x.id === m.senderId);
@@ -2377,7 +2444,8 @@ async function appendMessage(chatId, m) {
   if (list.some((x) => x.id === m.id)) return;
   const prev = list[list.length - 1];
   list.push(m);
-  const isChannelChat = state.chats.find((c) => c.id === chatId)?.type === 'channel';
+  const chat = state.chats.find((c) => c.id === chatId);
+  const isChannelChat = chat?.type === 'channel';
   if (isChannelChat && isChannelMemberNotice(m)) return;
   const text = await plainOf(chatId, m);
   if (text) state.preview.set(chatId, text);
@@ -2416,7 +2484,7 @@ async function appendMessage(chatId, m) {
   const grouped = !isChannelChat && !newDay && prev && prev.senderId === m.senderId && m.at - prev.at < 5 * 60e3;
   el.className = `msg ${mine ? 'mine' : 'them'}${grouped ? ' same' : ''}`;
   el.dataset.id = String(m.id);
-  if (!mine) addSenderName(el, chatId, m);
+  if (!mine) addSenderName(el, chatId, m, chat);
   if (media.length) {
     el.classList.add('has-media');
     if (media.length === 1 && media[0].kind === 'circle' && !text) el.classList.add('solo-circle');
@@ -2428,7 +2496,7 @@ async function appendMessage(chatId, m) {
     fillMentions(t, text || '');
     el.append(t);
   }
-  el.append(messageMeta(chatId, m));
+  el.append(messageMeta(chatId, m, chat));
   wrap.append(el);
   if (nearBottom || mine) {
     requestAnimationFrame(() => {
@@ -4757,13 +4825,16 @@ function queueEmoji(node) {
   emojiQueued = true;
   requestAnimationFrame(() => {
     emojiQueued = false;
-    const list = [...emojiPending];
+    let list = [...emojiPending].filter((n) => n.isConnected && emojiAllowed(n) && !n.matches('img.emoji'));
     emojiPending.clear();
-    for (const n of list) {
-      if (!n.isConnected || !emojiAllowed(n)) continue;
-      if (n.matches('img.emoji')) continue;
-      paintEmoji(n);
+    /* если за кадр добавилась целая лента, разбираем общий контейнер
+       один раз, а не каждый пузырь по отдельности */
+    list = list.filter((n) => !list.some((other) => other !== n && other.contains(n)));
+    if (list.length > 6) {
+      const root = list[0].closest('#messages, #chat-list, .sheet-panel, .users-page, .aud-panel');
+      if (root && list.every((n) => root.contains(n))) list = [root];
     }
+    for (const n of list) paintEmoji(n);
   });
 }
 

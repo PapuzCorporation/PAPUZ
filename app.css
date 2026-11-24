@@ -276,22 +276,12 @@ button{background:none;border:0;cursor:pointer}
 
 /* ---------------------------------------------------------------- фон */
 .bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg-grad)}
-.glow{position:absolute;border-radius:50%;opacity:var(--glow-opacity);will-change:transform;transform:translateZ(0)}
-.g1{width:70vmax;height:70vmax;left:-25vmax;top:-30vmax;
-  background:var(--glow-1);
-  animation:drift1 26s ease-in-out infinite alternate}
-.g2{width:60vmax;height:60vmax;right:-22vmax;bottom:-24vmax;
-  background:var(--glow-2);
-  animation:drift2 32s ease-in-out infinite alternate}
-.g3{width:44vmax;height:44vmax;left:38%;top:44%;
-  background:var(--glow-3);
-  animation:drift1 22s ease-in-out infinite alternate-reverse}
-@keyframes drift1{to{transform:translate3d(6vmax,4vmax,0) scale(1.08)}}
-@keyframes drift2{to{transform:translate3d(-5vmax,-4vmax,0) scale(1.1)}}
-/* на телефоне три больших фоновых слоя не двигаем: картинка та же, но без просадки FPS */
-@media (max-width:860px){
-  .glow{animation:none;will-change:auto;transform:none}
-}
+/* три больших слоя остаются на месте: картинка та же, но GPU не
+   перерисовывает их каждую секунду ни на телефоне, ни на компьютере */
+.glow{position:absolute;border-radius:50%;opacity:var(--glow-opacity)}
+.g1{width:70vmax;height:70vmax;left:-25vmax;top:-30vmax;background:var(--glow-1)}
+.g2{width:60vmax;height:60vmax;right:-22vmax;bottom:-24vmax;background:var(--glow-2)}
+.g3{width:44vmax;height:44vmax;left:38%;top:44%;background:var(--glow-3)}
 .grain{position:absolute;inset:0;opacity:var(--grain-opacity);
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
 
@@ -299,19 +289,22 @@ button{background:none;border:0;cursor:pointer}
 .snow{position:fixed;inset:0;z-index:2;pointer-events:none;overflow:hidden;display:none;contain:strict}
 html[data-snow="on"] .snow{display:block}
 
-.snow i{position:absolute;top:0;left:0;animation:snowfall linear infinite;will-change:transform}
-.snow i b{display:block;width:100%;height:100%;border-radius:50%;background:var(--snow-ink,#f4fbff);
-  box-shadow:0 0 4px var(--snow-glow,rgba(200,235,255,.42));
-  animation:snowsway ease-in-out infinite alternate}
-html[data-theme="light"] .snow i b,
-html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,165,.45)}
+.snow i{position:absolute;top:0;left:0;border-radius:50%;background:var(--snow-ink,#f4fbff);
+  animation:snowfall linear infinite;will-change:transform}
+html[data-theme="light"] .snow i,
+html[data-theme="sakura"] .snow i{--snow-ink:#bcd8e6}
+/* траектория с покачиванием задаётся одной анимацией: без вложенного
+   слоя, второй анимации и свечения на каждой снежинке */
 @keyframes snowfall{
   from{transform:translate3d(0,-12vh,0)}
-  to{transform:translate3d(var(--drift,20px),112vh,0)}
-}
-@keyframes snowsway{
-  from{transform:translate3d(-7px,0,0)}
-  to{transform:translate3d(7px,0,0)}
+  12.5%{transform:translate3d(var(--x1,0),3.5vh,0)}
+  25%{transform:translate3d(var(--x2,0),19vh,0)}
+  37.5%{transform:translate3d(var(--x3,0),34.5vh,0)}
+  50%{transform:translate3d(var(--x4,0),50vh,0)}
+  62.5%{transform:translate3d(var(--x5,0),65.5vh,0)}
+  75%{transform:translate3d(var(--x6,0),81vh,0)}
+  87.5%{transform:translate3d(var(--x7,0),96.5vh,0)}
+  to{transform:translate3d(var(--x8,20px),112vh,0)}
 }
 @media (prefers-reduced-motion:reduce){
   .snow{display:none!important}
@@ -326,9 +319,8 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   font-size:clamp(3.2rem,12.5vw,4.6rem);line-height:.95;letter-spacing:.03em;
   background:var(--brand-grad);
   -webkit-background-clip:text;background-clip:text;color:transparent;
-  animation:sheen 9s ease-in-out infinite;background-size:100% 220%;
+  background-position:50% 0;background-size:100% 220%;
 }
-@keyframes sheen{0%,100%{background-position:50% 0}50%{background-position:50% 100%}}
 .brand-sub{margin:10px 0 0;color:var(--muted);font-size:13.5px;letter-spacing:.06em;text-transform:lowercase}
 .boot-text{margin:0;text-align:center;color:var(--muted);font-size:clamp(16px,4.4vw,19px);letter-spacing:.08em;text-transform:lowercase}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -470,13 +462,15 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .user-row-nick{font-size:12px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .user-row-bio{margin-top:2px;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.chat-list{flex:1;min-height:0;min-width:0;overflow-y:auto;padding:4px 8px 8px;scrollbar-width:thin;overscroll-behavior:contain}
+.chat-list{flex:1;min-height:0;min-width:0;overflow-y:auto;padding:4px 8px 8px;scrollbar-width:thin;overscroll-behavior:contain;
+  contain:layout style}
 .chat-list::-webkit-scrollbar{width:6px}
 .chat-list::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:6px}
 
 .chat-item{
   display:flex;align-items:center;gap:11px;width:100%;min-width:0;padding:10px;border-radius:16px;text-align:left;
   transition:background .18s,transform .18s var(--ease);position:relative;
+  contain:layout style;
 }
 .chat-item.is-new{animation:itemIn .5s var(--ease) both;animation-delay:calc(var(--i,0) * 40ms)}
 @keyframes itemIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -618,14 +612,14 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .p-close .ico{width:14px;height:14px}
 
 .messages{flex:1;min-height:0;overflow-y:auto;padding:18px max(16px, calc((100% - 880px) / 2)) 8px;
-  display:flex;flex-direction:column;gap:3px;
+  display:flex;flex-direction:column;gap:3px;contain:layout style;
   scrollbar-width:thin;overscroll-behavior:contain;overflow-anchor:none}
 .messages::-webkit-scrollbar{width:6px}
 .messages::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:6px}
 
 .msg{max-width:min(76%,540px);padding:8px 12px 7px;border-radius:18px;font-size:14.5px;line-height:1.42;
   word-wrap:break-word;overflow-wrap:anywhere;white-space:pre-wrap;
-  animation:msgIn .28s var(--ease) both;position:relative}
+  animation:msgIn .28s var(--ease) both;position:relative;contain:layout style}
 .msg:not(.same){margin-top:9px}
 @keyframes msgIn{from{opacity:0;transform:translateY(7px) scale(.99)}to{opacity:1;transform:none}}
 .msg.them{align-self:flex-start;color:var(--them-ink);border-bottom-left-radius:7px;
@@ -672,19 +666,17 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .composer{display:flex;align-items:flex-end;gap:7px;
   padding:8px max(12px, calc((100% - 880px) / 2)) calc(8px + env(safe-area-inset-bottom))}
 .c-btn{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;
-  color:var(--c-btn-ink);background:var(--glass-bg,var(--card-bg));border:1px solid var(--c-btn-line);
+  color:var(--c-btn-ink);background:var(--glass-solid,var(--glass-bg,var(--card-bg)));border:1px solid var(--c-btn-line);
   box-shadow:0 10px 24px -18px rgba(0,0,0,.55);
-  backdrop-filter:var(--glass-blur,blur(12px));-webkit-backdrop-filter:var(--glass-blur,blur(12px));
   transition:transform .16s var(--ease),background .2s,color .2s}
 .c-btn .ico{width:21px;height:21px;pointer-events:none}
 .c-btn:active{transform:scale(.93);background:var(--c-btn-bg-active)}
-.c-btn[aria-expanded="true"]{color:var(--send-fg);background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}
+.c-btn[aria-expanded="true"]{color:var(--send-fg);background:var(--send-grad-press),var(--glass-solid,var(--glass-bg,var(--card-bg)));border-color:var(--send-line-press)}
 .c-field{flex:1;min-width:0;display:flex;align-items:flex-end;padding:2px 4px 2px 15px;border-radius:22px;
-  background:var(--glass-bg,var(--card-bg));border:1px solid var(--line);
+  background:var(--glass-solid,var(--glass-bg,var(--card-bg)));border:1px solid var(--line);
   box-shadow:0 10px 24px -18px rgba(0,0,0,.55);
-  backdrop-filter:var(--glass-blur,blur(12px));-webkit-backdrop-filter:var(--glass-blur,blur(12px));
   transition:border-color .2s,background .2s}
-.c-field:focus-within{border-color:var(--input-focus-line);background:var(--glass-bg-focus,var(--input-bg-focus))}
+.c-field:focus-within{border-color:var(--input-focus-line);background:var(--glass-solid-focus,var(--glass-bg-focus,var(--input-bg-focus)))}
 .c-field textarea{flex:1;min-width:0;resize:none!important;padding:9px 0;background:none;border:0;outline:none;
   max-height:132px;line-height:1.42;font-size:15px;color:var(--ink);font-family:inherit;
   overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;-webkit-appearance:none;appearance:none}
@@ -694,17 +686,16 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .send{
   position:relative;width:42px;height:42px;flex:none;border-radius:50%;
   display:grid;place-items:center;color:var(--send-fg);
-  background:var(--send-grad),var(--glass-bg,var(--card-bg));border:1px solid var(--send-line);
-  backdrop-filter:var(--glass-blur,blur(12px));-webkit-backdrop-filter:var(--glass-blur,blur(12px));
+  background:var(--send-grad),var(--glass-solid,var(--glass-bg,var(--card-bg)));border:1px solid var(--send-line);
   box-shadow:var(--send-inset),0 10px 24px -18px rgba(0,0,0,.55);
   transition:transform .16s var(--ease),background .2s,border-color .2s,opacity .2s;
 }
-.send:active{transform:scale(.93);background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}
+.send:active{transform:scale(.93);background:var(--send-grad-press),var(--glass-solid,var(--glass-bg,var(--card-bg)));border-color:var(--send-line-press)}
 .send .ico{width:21px;height:21px}
 .send.is-mic .ico{width:20px;height:20px}
 .send.is-circle .ico{width:20px;height:20px}
-.send[disabled]{opacity:.4;border-color:var(--send-line);background:var(--send-grad),var(--glass-bg,var(--card-bg))}
-@media (hover:hover){.send:hover{background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}}
+.send[disabled]{opacity:.4;border-color:var(--send-line);background:var(--send-grad),var(--glass-solid,var(--glass-bg,var(--card-bg)))}
+@media (hover:hover){.send:hover{background:var(--send-grad-press),var(--glass-solid,var(--glass-bg,var(--card-bg)));border-color:var(--send-line-press)}}
 
 /* подписка на канал вместо поля ввода, пока не подписан */
 .ch-sub{display:flex;align-items:center;justify-content:center;
@@ -714,11 +705,11 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 /* ------------------------------------------------------------ профиль */
 .sheet{position:fixed;top:var(--app-top,0);left:0;right:0;height:100%;height:100dvh;height:var(--app-h,100dvh);
   z-index:60;display:flex;justify-content:flex-end}
-.sheet-backdrop{position:absolute;inset:0;background:var(--backdrop);backdrop-filter:blur(2px);
+.sheet-backdrop{position:absolute;inset:0;background:var(--backdrop);
   animation:fadeIn .28s ease both}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .sheet-panel{
-  position:relative;width:min(430px,100%);height:100%;overflow-y:auto;
+  position:relative;width:min(430px,100%);height:100%;overflow-y:auto;contain:layout style;
   background:var(--sheet-bg);
   border-left:1px solid var(--line);box-shadow:var(--sheet-shadow);
   animation:slideIn .42s var(--ease) both;
@@ -1114,7 +1105,7 @@ html[data-theme="simple"]{--them-solid:#202020;--day-solid:#1e1e1e;--system-soli
 /* слой обоев: фиксированный фон под сообщениями */
 .chat-scroll{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
 .chat-scroll > .messages{flex:1;min-height:0}
-.chat-wall{position:absolute;inset:0;z-index:0;display:none;overflow:hidden;background:var(--wp-grad)}
+.chat-wall{position:absolute;inset:0;z-index:0;display:none;overflow:hidden;background:var(--wp-grad);contain:strict}
 .wall-svg{position:absolute;inset:0;display:block;width:100%;height:100%}
 .wall-rect{fill:none}
 .wp-sprite{position:absolute;width:0;height:0;overflow:hidden}
@@ -1292,22 +1283,22 @@ html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
   opacity:0;transition:opacity .35s ease}
 .media-img img.on{opacity:1}
 .media-img .ph{position:absolute;inset:0;background:var(--shimmer);
-  background-size:200% 100%;animation:shimmer 1.4s linear infinite}
-@keyframes shimmer{to{background-position:-200% 0}}
+  animation:shimmerPulse 1.4s ease-in-out infinite}
+/* мягкое дыхание вместо перерисовки градиента каждую секунду */
+@keyframes shimmerPulse{0%,100%{opacity:.55}50%{opacity:1}}
 
 /* ---- видео с собственным плеером ---- */
 .media-video{position:relative;border-radius:14px;overflow:hidden;background:var(--video-bg);line-height:0;
   width:min(74vw,420px);max-width:100%}
 .media-video:not(.ready)::before{content:"";position:absolute;inset:0;z-index:0;
   background:var(--shimmer-soft);
-  background-size:200% 100%;animation:shimmer 1.4s linear infinite}
+  animation:shimmerPulse 1.4s ease-in-out infinite}
 .media-video video{display:block;width:100%;height:100%;object-fit:cover;background:#000;
   opacity:0;transition:opacity .3s ease}
 .media-video.ready video{opacity:1}
 .v-big{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:58px;height:58px;
   border-radius:50%;display:grid;place-items:center;color:#fff;z-index:2;
-  background:rgba(6,18,13,.5);border:1px solid rgba(255,255,255,.22);
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  background:rgba(6,18,13,.72);border:1px solid rgba(255,255,255,.22);
   transition:opacity .22s var(--ease),transform .22s var(--ease)}
 .v-big .ico{width:22px;height:22px}
 .v-big:active{transform:translate(-50%,-50%) scale(.94)}
@@ -1447,8 +1438,7 @@ html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
 .rec{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;
   pointer-events:none;animation:fadeIn .18s ease both}
 .rec.is-circle{align-items:center;flex-direction:column;justify-content:center;
-  background:var(--rec-veil);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  background:var(--rec-veil)}
 .rec-bar{pointer-events:auto;display:flex;align-items:center;gap:10px;width:min(560px, calc(100% - 20px));
   margin:0 auto calc(10px + env(safe-area-inset-bottom));padding:8px 10px 8px 8px;border-radius:20px;
   background:var(--rec-bar-bg);border:1px solid var(--rec-line);
@@ -1496,7 +1486,7 @@ body.rec-voice .composer{opacity:0;pointer-events:none}
 
 /* ---- шторка плеера ---- */
 .aud{position:fixed;inset:0;z-index:66;display:flex;align-items:flex-end;justify-content:center}
-.aud-backdrop{position:absolute;inset:0;background:var(--backdrop);backdrop-filter:blur(3px);
+.aud-backdrop{position:absolute;inset:0;background:var(--backdrop);
   animation:fadeIn .2s ease both}
 .aud-panel{position:relative;width:min(440px,100%);
   margin:0 10px calc(10px + env(safe-area-inset-bottom));padding:16px 16px 22px;border-radius:26px;
@@ -1563,7 +1553,7 @@ body.rec-voice .composer{opacity:0;pointer-events:none}
   .side{border-right:0;width:100%;max-width:100%;overflow-x:clip}
   .chat{position:fixed;top:var(--app-top,0);left:0;right:0;height:100%;height:100dvh;height:var(--app-h,100dvh);
     z-index:30;background:var(--chat-mobile-bg);
-    transform:translateX(100%);transition:transform .34s var(--ease);will-change:transform}
+    transform:translateX(100%);transition:transform .34s var(--ease)}
   .shell.chat-open .chat{transform:none}
   .back{display:grid}
   .chat-empty{display:none}
@@ -3096,6 +3086,18 @@ img.emoji{
   width:1.15em;height:1.15em;margin:0 .04em;vertical-align:-.19em;
   display:inline-block;pointer-events:none;
 }
+
+/* -------- плотная замена стеклянному размытию композера и кнопок
+   Тот же цвет темы, но без backdrop-filter: композер не заставляет GPU
+   пересчитывать размытие фона при каждой прокрутке и смене кадра. */
+:root{--glass-solid:rgba(5,10,8,.90);--glass-solid-focus:rgba(4,8,6,.95)}
+html[data-theme="black"]{--glass-solid:rgba(8,8,8,.92);--glass-solid-focus:rgba(5,5,5,.96)}
+html[data-theme="light"]{--glass-solid:rgba(250,253,248,.86);--glass-solid-focus:rgba(255,255,255,.94)}
+html[data-theme="sakura"]{--glass-solid:rgba(255,250,252,.86);--glass-solid-focus:rgba(255,253,254,.94)}
+html[data-theme="copper"]{--glass-solid:rgba(16,11,7,.90);--glass-solid-focus:rgba(12,8,5,.95)}
+html[data-theme="neon"]{--glass-solid:rgba(8,5,15,.90);--glass-solid-focus:rgba(6,4,11,.95)}
+html[data-theme="ocean"]{--glass-solid:rgba(4,11,18,.90);--glass-solid-focus:rgba(3,8,13,.95)}
+html[data-theme="simple"]{--glass-solid:rgba(20,20,20,.90);--glass-solid-focus:rgba(16,16,16,.95)}
 
 /* ------------------------------------ светлые обои в тёмных темах
    На белых и радужных обоях прозрачное стекло сливается с фоном.
