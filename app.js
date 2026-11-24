@@ -4912,8 +4912,8 @@ if (window.visualViewport) {
    Настоящий backdrop-filter в Android WebView рвёт прокручиваемую
    ленту, поэтому размытие рисуем сами: под кнопками лежит копия
    сообщений у нижнего края, размытая обычным filter:blur(). Копию
-   двигаем вместе со скроллом через transform, а форму кнопок задаёт
-   маска. В копию берём только сообщения у полосы композера и заранее
+   двигаем вместе со скроллом через transform, а форму кнопок и меню
+   задаёт маска. В копию берём только сообщения у полосы композера и заранее
    запоминаем их высоты, чтобы прокрутка не вызывала пересчёт ленты. */
 (() => {
   const strip = $('#glass-strip');
@@ -4922,6 +4922,7 @@ if (window.visualViewport) {
   const list = $('#messages');
   const body = $('#chat-body');
   const composer = $('#composer');
+  const attachMenu = $('#attach-menu');
   if (!strip || !shift || !wall || !list || !body || !composer) return;
 
   const pills = [$('#btn-attach'), $('#composer .c-field'), $('#btn-send')].filter(Boolean);
@@ -4962,8 +4963,9 @@ if (window.visualViewport) {
     return items;
   }
 
-  /* маска: только круги кнопок и пилюля поля ввода */
-  function maskFor(rect) {
+  /* маска: круги кнопок, пилюля поля ввода и, пока открыто меню
+     прикрепления, его прямоугольник с хвостиком */
+  function maskFor(rect, menuRect) {
     const parts = [];
     for (const el of pills) {
       if (!el || el.hidden || !el.getClientRects().length) continue;
@@ -4974,6 +4976,26 @@ if (window.visualViewport) {
         `<rect x="${(b.left - rect.left).toFixed(1)}" y="${(b.top - rect.top).toFixed(1)}"` +
         ` width="${b.width.toFixed(1)}" height="${b.height.toFixed(1)}"` +
         ` rx="${r.toFixed(1)}" ry="${r.toFixed(1)}" fill="#fff"/>`,
+      );
+    }
+    if (menuRect) {
+      const x = menuRect.left - rect.left;
+      const y = menuRect.top - rect.top;
+      const w = menuRect.width;
+      const h = menuRect.height;
+      const r = Math.min(18, w / 2, h / 2);
+      parts.push(
+        `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}"` +
+        ` width="${w.toFixed(1)}" height="${h.toFixed(1)}"` +
+        ` rx="${r.toFixed(1)}" ry="${r.toFixed(1)}" fill="#fff"/>`,
+      );
+      /* хвостик: квадрат 8×8, повёрнутый на 45° вокруг своего центра */
+      const tx = x + 21;
+      const ty = y + h + 6;
+      parts.push(
+        `<rect x="${(tx - 4).toFixed(1)}" y="${(ty - 4).toFixed(1)}"` +
+        ` width="8" height="8" rx="1.8" ry="1.8" fill="#fff"` +
+        ` transform="rotate(45 ${tx.toFixed(1)} ${ty.toFixed(1)})"/>`,
       );
     }
     if (!parts.length) return false;
@@ -5018,19 +5040,68 @@ if (window.visualViewport) {
     wallClone.style.height = `${chatRect.height}px`;
   }
 
+  /* меню прикрепления открывается и закрывается часто, а копия ленты
+     уже покрывает его область с запасом SLACK. Поэтому в этом случае
+     не пересобираем копию, а только тянем полосу и сдвигаем готовые
+     слои на ту же величину — открытие происходит в том же кадре. */
+  function fitMenu() {
+    clearTimeout(timer);
+    timer = 0;
+    if (!clone || strip.hidden) {
+      schedule(16);
+      return;
+    }
+    const oldTop = strip.getBoundingClientRect().top;
+    const stripBottom = strip.getBoundingClientRect().bottom;
+    let menuRect = null;
+    if (attachMenu && !attachMenu.hidden && attachMenu.getClientRects().length) {
+      const mb = attachMenu.getBoundingClientRect();
+      if (mb.width > 2 && mb.height > 2) menuRect = mb;
+    }
+    if (menuRect) {
+      const h = `${Math.ceil(stripBottom - menuRect.top + 2)}px`;
+      if (strip.style.height !== h) strip.style.height = h;
+    } else if (strip.style.height) {
+      strip.style.height = '';
+    }
+    const rect = strip.getBoundingClientRect();
+    const d = oldTop - rect.top;
+    if (d && clone) {
+      clone.style.top = `${(parseFloat(clone.style.top) || 0) + d}px`;
+      if (wallClone) wallClone.style.top = `${(parseFloat(wallClone.style.top) || 0) + d}px`;
+    }
+    maskFor(rect, menuRect);
+  }
+
   function build() {
     timer = 0;
     const show = !body.hidden && !composer.hidden && !!list.querySelector('.msg');
     strip.hidden = !show;
     if (!show) {
+      if (strip.style.height) strip.style.height = '';
       shift.classList.remove('on');
       clone = null;
       return;
     }
 
+    /* меню прикрепления: на время показа тянем стекло до его верха,
+       чтобы под меню была та же размытая копия, что и под полем */
+    const stripBottom = strip.getBoundingClientRect().bottom;
+    let menuRect = null;
+    if (attachMenu && !attachMenu.hidden && attachMenu.getClientRects().length) {
+      const mb = attachMenu.getBoundingClientRect();
+      if (mb.width > 2 && mb.height > 2) menuRect = mb;
+    }
+    if (menuRect) {
+      const h = `${Math.ceil(stripBottom - menuRect.top + 2)}px`;
+      if (strip.style.height !== h) strip.style.height = h;
+    } else if (strip.style.height) {
+      strip.style.height = '';
+    }
+
     const rect = strip.getBoundingClientRect();
     if (rect.width < 2 || rect.height < 2) return;
-    if (!maskFor(rect)) {
+    if (!maskFor(rect, menuRect)) {
       strip.hidden = true;
       return;
     }
@@ -5105,6 +5176,15 @@ if (window.visualViewport) {
   });
   new MutationObserver(() => invalidate(90)).observe(body, { attributes: true, attributeFilter: ['hidden'] });
   new MutationObserver(() => invalidate(90)).observe(composer, { attributes: true, attributeFilter: ['hidden'] });
+  if (attachMenu) {
+    /* меню не меняет раскладку ленты, поэтому кэш высот не сбрасываем:
+       открытие должно быть мгновенным, без обхода всех сообщений */
+    new MutationObserver(fitMenu).observe(attachMenu, {
+      attributes: true,
+      attributeFilter: ['hidden'],
+    });
+    new ResizeObserver(fitMenu).observe(attachMenu);
+  }
   new MutationObserver(() => invalidate(80)).observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['data-theme', 'data-wallpaper', 'data-wall-tone'],

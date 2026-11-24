@@ -703,7 +703,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
    размытие рисуем сами: под кнопками лежит размытая копия обоев и
    сообщений. Копия сдвигается вместе со скроллом обычным transform,
    а blur() живёт на отдельном слое и соседнюю ленту не трогает.
-   Видно копию только в форме кнопок — за это отвечает маска из app.js. */
+   Видно копию только в форме кнопок и меню — за это отвечает маска из app.js. */
 .glass-strip{position:absolute;left:0;right:0;bottom:0;height:var(--composer-h,68px);
   z-index:1;pointer-events:none;overflow:hidden;
   -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
@@ -1426,18 +1426,20 @@ html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
 .attach-menu{
   position:absolute;left:12px;bottom:74px;z-index:20;min-width:176px;padding:6px;
   border-radius:18px;
-  background:linear-gradient(180deg,rgba(255,255,255,.05),transparent 72%),var(--menu-bg);
+  background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 72%),
+    var(--glass-bg-focus,var(--menu-bg));
   border:1px solid var(--line-strong);
-  box-shadow:var(--menu-shadow),inset 0 1px 0 rgba(255,255,255,.05);
-  animation:menuIn .24s var(--ease) both;
+  box-shadow:var(--menu-shadow),inset 0 1px 0 rgba(255,255,255,.08);
+  animation:menuIn .18s linear both;
 }
 .attach-menu::after{
-  content:"";position:absolute;left:16px;bottom:-6px;width:10px;height:10px;
-  background:var(--menu-bg);border-right:1px solid var(--line-strong);
+  content:"";position:absolute;left:17px;bottom:-11px;width:8px;height:8px;
+  background:var(--glass-bg-focus,var(--menu-bg));
+  border-right:1px solid var(--line-strong);
   border-bottom:1px solid var(--line-strong);
   border-bottom-right-radius:2px;transform:rotate(45deg);
 }
-@keyframes menuIn{from{opacity:0;transform:translateY(9px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes menuIn{from{opacity:0}to{opacity:1}}
 @keyframes menuRow{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .attach-menu button{display:flex;align-items:center;gap:11px;width:100%;min-height:42px;padding:0 8px;
   border-radius:12px;font-size:14px;color:var(--ink);text-align:left;
@@ -1602,7 +1604,7 @@ html #chat-body.typing-on .messages{padding-bottom:calc(var(--composer-h,68px) +
 html .composer{position:absolute;left:0;right:0;bottom:0;z-index:2}
 html .typing{position:absolute;left:0;right:0;bottom:var(--composer-h,68px);z-index:2}
 html .ch-sub{position:absolute;left:0;right:0;bottom:0;z-index:2}
-html .attach-menu{bottom:calc(var(--composer-h,68px) + 8px)}
+html .attach-menu{bottom:calc(var(--composer-h,68px) + 12px)}
 html .uploads{bottom:calc(var(--composer-h,68px) + 10px)}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;
