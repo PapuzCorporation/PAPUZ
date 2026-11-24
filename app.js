@@ -230,8 +230,8 @@ const THEME_NAMES = {
 };
 const THEMES = Object.keys(THEME_COLORS);
 
-/* режим снега: включается поверх любой темы */
-const SNOW_ENABLED = false;
+/* режим снега: включается поверх любой темы, состояние приходит с сервера */
+let SNOW_ENABLED = false;
 
 let snowBuilt = false;
 function ensureSnow() {
@@ -262,6 +262,22 @@ function applySnow() {
   document.documentElement.dataset.snow = SNOW_ENABLED ? 'on' : 'off';
   if (SNOW_ENABLED) ensureSnow();
 }
+
+/* снег включают из бота: читаем настройку адреса, без кэша */
+async function loadSnow() {
+  try {
+    const res = await fetch(`/snow.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      SNOW_ENABLED = data.snow === true;
+    }
+  } catch { /* без сети — оставляем как есть */ }
+  applySnow();
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) loadSnow();
+});
 
 function paintTheme(theme) {
   document.documentElement.dataset.theme = theme;
@@ -296,7 +312,7 @@ window.addEventListener('storage', (e) => {
 paintTheme(THEMES.includes(document.documentElement.dataset.theme)
   ? document.documentElement.dataset.theme
   : 'dark');
-applySnow();
+loadSnow();
 
 /* -------------------------------------------------------------- обои */
 
