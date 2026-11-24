@@ -1,6 +1,6 @@
 /* PAPUZ — клиент */
-import * as K from './crypto.js?v=132';
-import * as M from './media.js?v=132';
+import * as K from './crypto.js?v=134';
+import * as M from './media.js?v=134';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -336,7 +336,7 @@ function readWallpaper() {
 
 /* спрайт узоров весит больше половины index.html: грузим его только
    когда обои действительно включены, а не на каждом открытии сайта */
-const WALL_SPRITE_URL = '/walls.svg?v=132';
+const WALL_SPRITE_URL = '/walls.svg?v=134';
 let wallDefsState = 0;
 let wallDefsWaiters = [];
 function ensureWallDefs() {
@@ -4907,4 +4907,213 @@ if (window.visualViewport) {
   } catch {
     showAuth();
   }
+})();
+/* ------------------------------------------------ стекло композера
+   Настоящий backdrop-filter в Android WebView рвёт прокручиваемую
+   ленту, поэтому размытие рисуем сами: под кнопками лежит копия
+   сообщений у нижнего края, размытая обычным filter:blur(). Копию
+   двигаем вместе со скроллом через transform, а форму кнопок задаёт
+   маска. В копию берём только сообщения у полосы композера и заранее
+   запоминаем их высоты, чтобы прокрутка не вызывала пересчёт ленты. */
+(() => {
+  const strip = $('#glass-strip');
+  const shift = $('#glass-shift');
+  const wall = $('#glass-wall');
+  const list = $('#messages');
+  const body = $('#chat-body');
+  const composer = $('#composer');
+  if (!strip || !shift || !wall || !list || !body || !composer) return;
+
+  const pills = [$('#btn-attach'), $('#composer .c-field'), $('#btn-send')].filter(Boolean);
+  const SLACK = 380;   /* запас окна копии вокруг полосы, px */
+  const REBUILD = 260; /* через сколько прокрутки пересобирать окно */
+  const PAD = 80;      /* запас слоя над полосой, совпадает с .glass-shift */
+
+  let timer = 0;
+  let clone = null;
+  let wallClone = null;
+  let wallKey = '';
+  let maskUrl = '';
+  let builtTop = 0;
+  let cache = null;
+
+  function schedule(ms = 90) {
+    clearTimeout(timer);
+    timer = setTimeout(build, ms);
+  }
+
+  function invalidate(ms = 90) {
+    cache = null;
+    schedule(ms);
+  }
+
+  /* высоты строк в координатах содержимого ленты; считаем один раз
+     после изменения сообщений, а не на каждом шаге прокрутки */
+  function intro() {
+    if (cache) return cache;
+    const lr = list.getBoundingClientRect();
+    const y0 = lr.top - list.scrollTop;
+    const items = [];
+    for (const el of list.children) {
+      const b = el.getBoundingClientRect();
+      items.push({ el, top: b.top - y0, bottom: b.bottom - y0 });
+    }
+    cache = items;
+    return items;
+  }
+
+  /* маска: только круги кнопок и пилюля поля ввода */
+  function maskFor(rect) {
+    const parts = [];
+    for (const el of pills) {
+      if (!el || el.hidden || !el.getClientRects().length) continue;
+      const b = el.getBoundingClientRect();
+      if (b.width < 2 || b.height < 2) continue;
+      const r = Math.min(b.width, b.height) / 2;
+      parts.push(
+        `<rect x="${(b.left - rect.left).toFixed(1)}" y="${(b.top - rect.top).toFixed(1)}"` +
+        ` width="${b.width.toFixed(1)}" height="${b.height.toFixed(1)}"` +
+        ` rx="${r.toFixed(1)}" ry="${r.toFixed(1)}" fill="#fff"/>`,
+      );
+    }
+    if (!parts.length) return false;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${rect.height}">${parts.join('')}</svg>`;
+    const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+    if (url !== maskUrl) {
+      strip.style.webkitMaskImage = url;
+      strip.style.maskImage = url;
+      maskUrl = url;
+    }
+    return true;
+  }
+
+  /* обои под кнопками: тот же рисунок, что и в чате */
+  function buildWall(rect, chatRect) {
+    const root = document.documentElement;
+    if (!root.dataset.wallpaper) {
+      if (wallClone) {
+        wallClone.remove();
+        wallClone = null;
+        wallKey = '';
+      }
+      return;
+    }
+    const src = $('#chat-wall');
+    if (!src) return;
+    const key = `${root.dataset.wallpaper}|${root.dataset.wallTone || ''}`;
+    if (!wallClone || key !== wallKey) {
+      wallClone = src.cloneNode(true);
+      wallClone.removeAttribute('id');
+      wallClone.style.display = 'block';
+      wallClone.style.position = 'absolute';
+      wallClone.style.zIndex = '0';
+      wallClone.style.margin = '0';
+      wallClone.style.contain = 'none';
+      wall.replaceChildren(wallClone);
+      wallKey = key;
+    }
+    wallClone.style.left = '0px';
+    wallClone.style.top = `${chatRect.top - rect.top + PAD}px`;
+    wallClone.style.width = `${chatRect.width}px`;
+    wallClone.style.height = `${chatRect.height}px`;
+  }
+
+  function build() {
+    timer = 0;
+    const show = !body.hidden && !composer.hidden && !!list.querySelector('.msg');
+    strip.hidden = !show;
+    if (!show) {
+      shift.classList.remove('on');
+      clone = null;
+      return;
+    }
+
+    const rect = strip.getBoundingClientRect();
+    if (rect.width < 2 || rect.height < 2) return;
+    if (!maskFor(rect)) {
+      strip.hidden = true;
+      return;
+    }
+
+    const chat = document.querySelector('.chat-scroll');
+    const listRect = list.getBoundingClientRect();
+    if (!chat || listRect.height < 2) return;
+    buildWall(rect, chat.getBoundingClientRect());
+
+    /* окно копии: строки, которые могут попасть под полосу */
+    const items = intro();
+    const band = list.scrollTop + listRect.height - rect.height;
+    const from = band - SLACK;
+    const to = band + rect.height + SLACK;
+    const picked = [];
+    let first = -1;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].bottom < from) continue;
+      if (items[i].top > to) break;
+      if (first < 0) first = i;
+      picked.push(items[i].el);
+    }
+    if (first < 0) {
+      shift.classList.remove('on');
+      clone = null;
+      return;
+    }
+
+    const cs = getComputedStyle(list);
+    const padTop = parseFloat(cs.paddingTop) || 0;
+    const mt = parseFloat(getComputedStyle(items[first].el).marginTop) || 0;
+    const realTop = listRect.top + (items[first].top - list.scrollTop);
+
+    const c = document.createElement('div');
+    c.className = 'messages glass-list';
+    c.innerHTML = picked.map((el) => el.outerHTML).join('');
+    for (const el of c.querySelectorAll('[id]')) el.removeAttribute('id');
+    c.style.left = `${listRect.left - rect.left}px`;
+    c.style.top = `${realTop - padTop - mt - (rect.top - PAD)}px`;
+    c.style.width = `${list.clientWidth}px`;
+    c.style.padding = cs.padding;
+    c.style.overflow = 'visible';
+    c.style.transform = 'translate3d(0,0,0)';
+    shift.replaceChildren(c);
+    shift.classList.add('on');
+
+    clone = c;
+    builtTop = list.scrollTop;
+
+    for (const img of c.querySelectorAll('img')) {
+      if (img.loading === 'lazy') img.loading = 'eager';
+      if (!img.complete) img.addEventListener('load', () => invalidate(140), { once: true });
+    }
+  }
+
+  function sync() {
+    if (!clone) return;
+    const d = builtTop - list.scrollTop;
+    if (Math.abs(d) > REBUILD) {
+      build();
+      return;
+    }
+    clone.style.transform = `translate3d(0,${d}px,0)`;
+  }
+
+  list.addEventListener('scroll', sync, { passive: true });
+
+  new MutationObserver(() => invalidate(90)).observe(list, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+  new MutationObserver(() => invalidate(90)).observe(body, { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(() => invalidate(90)).observe(composer, { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(() => invalidate(80)).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme', 'data-wallpaper', 'data-wall-tone'],
+  });
+
+  const ro = new ResizeObserver(() => invalidate(80));
+  ro.observe(list);
+  ro.observe(composer);
+  window.addEventListener('resize', () => invalidate(120), { passive: true });
+
+  schedule(200);
 })();

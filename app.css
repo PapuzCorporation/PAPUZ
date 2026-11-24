@@ -668,14 +668,14 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   padding:8px max(12px, calc((100% - 880px) / 2)) calc(8px + env(safe-area-inset-bottom))}
 .c-btn{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;
   color:var(--c-btn-ink);background:var(--glass-bg,var(--card-bg));border:1px solid var(--c-btn-line);
-  box-shadow:0 10px 24px -18px rgba(0,0,0,.55);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.16),0 10px 24px -18px rgba(0,0,0,.55);
   transition:transform .16s var(--ease),background .2s,color .2s}
 .c-btn .ico{width:21px;height:21px;pointer-events:none}
 .c-btn:active{transform:scale(.93);background:var(--c-btn-bg-active)}
 .c-btn[aria-expanded="true"]{color:var(--send-fg);background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}
 .c-field{flex:1;min-width:0;display:flex;align-items:flex-end;padding:2px 4px 2px 15px;border-radius:22px;
   background:var(--glass-bg,var(--card-bg));border:1px solid var(--line);
-  box-shadow:0 10px 24px -18px rgba(0,0,0,.55);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.14),0 10px 24px -18px rgba(0,0,0,.55);
   transition:border-color .2s,background .2s}
 .c-field:focus-within{border-color:var(--input-focus-line);background:var(--glass-bg-focus,var(--input-bg-focus))}
 .c-field textarea{flex:1;min-width:0;resize:none!important;padding:9px 0;background:none;border:0;outline:none;
@@ -697,6 +697,32 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .send.is-circle .ico{width:20px;height:20px}
 .send[disabled]{opacity:.4;border-color:var(--send-line);background:var(--send-grad),var(--glass-bg,var(--card-bg))}
 @media (hover:hover){.send:hover{background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}}
+
+/* ------------------------------------------------ стекло композера
+   backdrop-filter в Android WebView рвёт прокрутку ленты, поэтому
+   размытие рисуем сами: под кнопками лежит размытая копия обоев и
+   сообщений. Копия сдвигается вместе со скроллом обычным transform,
+   а blur() живёт на отдельном слое и соседнюю ленту не трогает.
+   Видно копию только в форме кнопок — за это отвечает маска из app.js. */
+.glass-strip{position:absolute;left:0;right:0;bottom:0;height:var(--composer-h,68px);
+  z-index:1;pointer-events:none;overflow:hidden;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-size:100% 100%;mask-size:100% 100%}
+.glass-strip[hidden]{display:none}
+.glass-base{position:absolute;inset:0;background:var(--chat-grad)}
+@media (max-width:860px){.glass-base{background:var(--chat-mobile-bg,var(--chat-grad))}}
+.glass-wall{position:absolute;left:0;right:0;top:-80px;bottom:-80px;overflow:hidden;
+  filter:blur(20px) saturate(1.15);-webkit-filter:blur(20px) saturate(1.15)}
+.glass-wall .chat-wall{display:block!important;position:absolute;z-index:0;
+  inset:auto;margin:0;contain:none}
+.glass-shift{position:absolute;left:0;right:0;top:-80px;bottom:-80px;overflow:hidden;
+  filter:blur(16px) saturate(1.5);-webkit-filter:blur(16px) saturate(1.5);
+  opacity:0;transition:opacity .16s linear}
+.glass-shift.on{opacity:1}
+.glass-list{position:absolute;overflow:hidden;pointer-events:none;scrollbar-width:none;
+  background:transparent}
+.glass-list::-webkit-scrollbar{display:none}
+.glass-list *{animation:none!important;transition:none!important}
 
 /* подписка на канал вместо поля ввода, пока не подписан */
 .ch-sub{display:flex;align-items:center;justify-content:center;
@@ -3093,56 +3119,56 @@ img.emoji{
 }
 
 /* ------------------------------------ композер плывёт над лентой
-   Сообщения прокручиваются под панелью ввода, поэтому стекло плотнее
-   обычного: без backdrop-filter текст под кнопками не размывается, и
-   плотный фон оставляет от него только тень, а не вторую строку поверх
-   поля ввода. Переменные используют только кнопки композера и поле. */
-html{--glass-bg:rgba(12,18,15,.86);--glass-bg-focus:rgba(10,15,13,.93)}
-html[data-theme="black"]{--glass-bg:rgba(0,0,0,.88);--glass-bg-focus:rgba(0,0,0,.94)}
-html[data-theme="light"]{--glass-bg:rgba(255,255,255,.88);--glass-bg-focus:rgba(255,255,255,.93)}
-html[data-theme="sakura"]{--glass-bg:rgba(255,251,253,.88);--glass-bg-focus:rgba(255,252,254,.93)}
-html[data-theme="copper"]{--glass-bg:rgba(19,13,8,.86);--glass-bg-focus:rgba(15,10,6,.93)}
-html[data-theme="neon"]{--glass-bg:rgba(13,10,21,.86);--glass-bg-focus:rgba(10,7,17,.93)}
-html[data-theme="ocean"]{--glass-bg:rgba(4,11,18,.86);--glass-bg-focus:rgba(3,8,13,.93)}
-html[data-theme="simple"]{--glass-bg:rgba(17,17,17,.88);--glass-bg-focus:rgba(13,13,13,.94)}
+   Сообщения прокручиваются под панелью ввода. Настоящий backdrop-filter
+   здесь нельзя: Android WebView рвёт из-за него ленту. Вместо него под
+   кнопками лежит размытая копия ленты (см. .glass-strip), а эти
+   переменные задают только лёгкую тонировку поверх неё. */
+html{--glass-bg:rgba(12,18,15,.46);--glass-bg-focus:rgba(10,15,13,.58)}
+html[data-theme="black"]{--glass-bg:rgba(0,0,0,.50);--glass-bg-focus:rgba(0,0,0,.62)}
+html[data-theme="light"]{--glass-bg:rgba(255,255,255,.44);--glass-bg-focus:rgba(255,255,255,.56)}
+html[data-theme="sakura"]{--glass-bg:rgba(255,251,253,.45);--glass-bg-focus:rgba(255,252,254,.57)}
+html[data-theme="copper"]{--glass-bg:rgba(19,13,8,.46);--glass-bg-focus:rgba(15,10,6,.58)}
+html[data-theme="neon"]{--glass-bg:rgba(13,10,21,.46);--glass-bg-focus:rgba(10,7,17,.58)}
+html[data-theme="ocean"]{--glass-bg:rgba(4,11,18,.46);--glass-bg-focus:rgba(3,8,13,.58)}
+html[data-theme="simple"]{--glass-bg:rgba(17,17,17,.48);--glass-bg-focus:rgba(13,13,13,.60)}
 
 /* ------------------------------------ светлые обои в тёмных темах
    На белых и радужных обоях прозрачное стекло сливается с фоном.
    Только для этих тонов возвращаем плотное тёмное стекло композера
    и кнопок; на тёмных и «как тема» обоях остаётся прежнее светлое. */
 html[data-theme="dark"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(5,12,9,.86);
-  --glass-bg-focus:rgba(4,10,8,.93);
+  --glass-bg:rgba(5,12,9,.58);
+  --glass-bg-focus:rgba(4,10,8,.70);
   --glass-blur:blur(16px) saturate(1.08);
   --glass-muted:var(--muted);
 }
 html[data-theme="black"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(0,0,0,.88);
-  --glass-bg-focus:rgba(0,0,0,.94);
+  --glass-bg:rgba(0,0,0,.58);
+  --glass-bg-focus:rgba(0,0,0,.70);
   --glass-blur:blur(16px) saturate(1.02);
   --glass-muted:var(--muted);
 }
 html[data-theme="copper"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(17,10,6,.86);
-  --glass-bg-focus:rgba(14,8,5,.93);
+  --glass-bg:rgba(17,10,6,.58);
+  --glass-bg-focus:rgba(14,8,5,.70);
   --glass-blur:blur(16px) saturate(1.08);
   --glass-muted:var(--muted);
 }
 html[data-theme="neon"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(11,6,18,.86);
-  --glass-bg-focus:rgba(9,5,15,.93);
+  --glass-bg:rgba(11,6,18,.58);
+  --glass-bg-focus:rgba(9,5,15,.70);
   --glass-blur:blur(16px) saturate(1.1);
   --glass-muted:var(--muted);
 }
 html[data-theme="ocean"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(3,10,16,.86);
-  --glass-bg-focus:rgba(2,8,13,.93);
+  --glass-bg:rgba(3,10,16,.58);
+  --glass-bg-focus:rgba(2,8,13,.70);
   --glass-blur:blur(16px) saturate(1.08);
   --glass-muted:var(--muted);
 }
 html[data-theme="simple"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(14,14,14,.88);
-  --glass-bg-focus:rgba(10,10,10,.94);
+  --glass-bg:rgba(14,14,14,.58);
+  --glass-bg-focus:rgba(10,10,10,.70);
   --glass-blur:blur(16px) saturate(1.02);
   --glass-muted:var(--muted);
 }

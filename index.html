@@ -34,9 +34,9 @@
 <meta name="twitter:title" content="PAPUZ">
 <meta name="twitter:description" content="Тихий мессенджер для своих">
 <meta name="twitter:image" content="https://papuz.ru/og-image.png">
-<link rel="stylesheet" href="/app.css?v=132">
-<link rel="modulepreload" href="/crypto.js?v=132">
-<link rel="modulepreload" href="/media.js?v=132">
+<link rel="stylesheet" href="/app.css?v=134">
+<link rel="modulepreload" href="/crypto.js?v=134">
+<link rel="modulepreload" href="/media.js?v=134">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -262,6 +262,12 @@
             </svg>
           </div>
           <div class="messages" id="messages"></div>
+
+          <div class="glass-strip" id="glass-strip" aria-hidden="true" hidden>
+            <div class="glass-base"></div>
+            <div class="glass-wall" id="glass-wall"></div>
+            <div class="glass-shift" id="glass-shift"></div>
+          </div>
 
           <div class="typing" id="typing" hidden><span></span><span></span><span></span></div>
 
@@ -842,6 +848,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/twemoji.min.js"></script>
-<script src="/app.js?v=132" type="module"></script>
+<script src="/app.js?v=134" type="module"></script>
 </body>
 </html>
