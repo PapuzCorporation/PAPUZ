@@ -275,8 +275,56 @@ async function loadSnow() {
   applySnow();
 }
 
+/* объявление с сайта: одно и то же не показываем дважды */
+const ANNOUNCE_KEY = 'papuz-announce';
+let announceId = '';
+
+function closeAnnounce(markSeen = true) {
+  const box = $('#announce');
+  if (!box || box.hidden) return;
+  box.hidden = true;
+  if (markSeen && announceId) {
+    try { localStorage.setItem(ANNOUNCE_KEY, announceId); } catch { /* приватный режим */ }
+  }
+  announceId = '';
+  const anySheet = $$('.sheet').some((sheet) => !sheet.hidden);
+  document.body.style.overflow = anySheet ? 'hidden' : '';
+}
+
+async function loadAnnounce() {
+  let data;
+  try {
+    const res = await fetch(`/announce.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) return;
+    data = await res.json();
+  } catch { return; }
+
+  const id = data && data.id != null ? String(data.id) : '';
+  const text = data && typeof data.text === 'string' ? data.text.trim() : '';
+  if (!id || !text) return;
+  try {
+    if (localStorage.getItem(ANNOUNCE_KEY) === id) return;
+  } catch { /* приватный режим: показываем */ }
+
+  announceId = id;
+  $('#announce-text').textContent = text;
+  $('#announce').hidden = false;
+  document.body.style.overflow = 'hidden';
+  $('#announce-ok').focus({ preventScroll: true });
+}
+
+$('#announce-ok').addEventListener('click', () => closeAnnounce(true));
+$('#announce').addEventListener('click', (e) => {
+  if (e.target.closest('[data-announce-close]')) closeAnnounce(true);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('#announce').hidden) closeAnnounce(true);
+});
+
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) loadSnow();
+  if (document.hidden) return;
+  loadSnow();
+  loadAnnounce();
 });
 
 function paintTheme(theme) {
@@ -313,6 +361,7 @@ paintTheme(THEMES.includes(document.documentElement.dataset.theme)
   ? document.documentElement.dataset.theme
   : 'dark');
 loadSnow();
+loadAnnounce();
 
 /* -------------------------------------------------------------- обои */
 
