@@ -53,7 +53,11 @@ async function api(path, opts = {}) {
     throw new Error('unauthorized');
   }
   const data = res.headers.get('content-type')?.includes('json') ? await res.json() : null;
-  if (!res.ok) throw new Error(data?.error || 'Ошибка сети');
+  if (!res.ok) {
+    const err = new Error(data?.error || 'Ошибка сети');
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 
@@ -445,6 +449,7 @@ function showApp() {
   fillProfile();
   refreshStats().then(fillProfile);
   loadNotifications();
+  initReadQueue();
   loadChats();
   connectWs();
 }
@@ -547,11 +552,28 @@ $('#auth-form').addEventListener('submit', async (e) => {
 
 /* --------------------------------------------------------------- чаты */
 
+/* несколько обновлений могут идти одновременно (например, пачка сообщений
+   после реконнекта): применяем только самый свежий ответ, иначе старый
+   счётчик непрочитанных перетрёт новый */
+let loadChatsSeq = 0;
+
 async function loadChats() {
+  const seq = ++loadChatsSeq;
   const { chats } = await api('/api/chats');
+  if (seq !== loadChatsSeq) return;
   /* каналы, открытые для просмотра без подписки, не теряем при обновлении списка */
   const previews = state.chats.filter((c) => c.preview);
+  const known = new Map(state.chats.map((c) => [c.id, c]));
   state.chats = chats;
+  /* запрос мог уйти раньше последнего сообщения из сокета: не откатываем
+     более свежее локальное превью и счётчик непрочитанных назад */
+  for (const c of state.chats) {
+    const prev = known.get(c.id);
+    if (prev && (Number(prev.lastMessage?.id) || 0) > (Number(c.lastMessage?.id) || 0)) {
+      c.lastMessage = prev.lastMessage;
+      c.unread = prev.unread;
+    }
+  }
   for (const p of previews) {
     if (!chats.some((c) => c.id === p.id)) state.chats.unshift(p);
   }
@@ -559,6 +581,10 @@ async function loadChats() {
   /* API мог ответить раньше, чем presence: возвращаем свежий статус */
   applyStoredPresence();
   scheduleRenderChats();
+  /* сервер мог сообщить более свежие last_read/unread — не ждём перезахода */
+  if (state.activeId) updateTicks(state.activeId);
+  if (state.activeId) markRead(state.activeId);
+  flushAllReads();
   decryptPreviews();
   refreshActiveHeader();
 }
@@ -696,12 +722,19 @@ function makeChatItem(c) {
   time.className = 'chat-item-time';
   top.append(name, time);
 
+  const bottom = document.createElement('div');
+  bottom.className = 'chat-item-bottom';
   const last = document.createElement('div');
   last.className = 'chat-item-last';
-  body.append(top, last);
+  /* бейдж всегда в разметке: показываем его классом, без пересборки пункта */
+  const badge = document.createElement('span');
+  badge.className = 'badge';
+  badge.hidden = true;
+  bottom.append(last, badge);
+  body.append(top, bottom);
   btn.append(avWrap, body);
 
-  btn._ui = { av, avWrap, name, time, last, badge: null, avKey: '' };
+  btn._ui = { av, avWrap, name, time, last, badge, avKey: '' };
   btn.addEventListener('click', () => openChat(c.id));
   return btn;
 }
@@ -774,16 +807,20 @@ function paintChatItem(btn, c, i, dmPeer) {
   paintChatLast(ui.last, c, dmPeer);
 
   const unread = Number(c.unread) || 0;
+  btn.classList.toggle('has-unread', unread > 0);
   if (unread > 0) {
-    if (!ui.badge) {
-      ui.badge = document.createElement('span');
-      ui.badge.className = 'badge';
-      btn.append(ui.badge);
+    const text = unread > 99 ? '99+' : String(unread);
+    if (ui.badge.hidden || ui.badge.textContent !== text) {
+      ui.badge.textContent = text;
+      ui.badge.title = `непрочитанных: ${unread}`;
+      ui.badge.hidden = false;
+      ui.badge.classList.remove('pop');
+      void ui.badge.offsetWidth;
+      ui.badge.classList.add('pop');
     }
-    ui.badge.textContent = unread > 99 ? '99+' : unread;
-  } else if (ui.badge) {
-    ui.badge.remove();
-    ui.badge = null;
+  } else if (!ui.badge.hidden) {
+    ui.badge.hidden = true;
+    ui.badge.classList.remove('pop');
   }
 }
 
@@ -2104,17 +2141,144 @@ async function appendMessage(chatId, m) {
   }
 }
 
-async function markRead(chatId) {
-  if (chatId !== state.activeId) return;
+/* Подтверждение прочтения — не «выстрелил и забыл»: держим цель по каждому
+   чату и досылаем, пока сервер не ответил. Иначе при обрыве связи отметка
+   теряется и у собеседника сообщение так и остаётся непрочитанным. */
+const READ_QUEUE_KEY = 'papuz-read-queue';
+const readQueue = new Map();
+let readQueueUser = null;
+
+function readEntry(chatId) {
+  let r = readQueue.get(chatId);
+  if (!r) {
+    r = { want: 0, ack: 0, attempts: 0, sending: false, timer: 0 };
+    readQueue.set(chatId, r);
+  }
+  return r;
+}
+
+/* подтверждение могло обогнать список: после успешного read просим свежий
+   счётчик непрочитанных, но не чаще одного раза за полсекунды */
+let readReconcileTimer = 0;
+
+function scheduleReadReconcile() {
+  clearTimeout(readReconcileTimer);
+  readReconcileTimer = setTimeout(() => {
+    readReconcileTimer = 0;
+    if (state.me) loadChats().catch(() => {});
+  }, 400);
+}
+
+function saveReadQueue() {
+  if (!state.me) return;
+  const out = {};
+  for (const [chatId, r] of readQueue) {
+    if (r.want > r.ack) out[chatId] = r.want;
+  }
+  try {
+    const key = `${READ_QUEUE_KEY}:${state.me.id}`;
+    if (Object.keys(out).length) localStorage.setItem(key, JSON.stringify(out));
+    else localStorage.removeItem(key);
+  } catch { /* приватный режим */ }
+}
+
+/* после перезагрузки или смены аккаунта не теряем неподтверждённые отметки */
+function initReadQueue() {
+  const uid = state.me?.id || null;
+  if (readQueueUser === uid) return;
+  readQueueUser = uid;
+  for (const r of readQueue.values()) clearTimeout(r.timer);
+  readQueue.clear();
+  if (!uid) return;
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(`${READ_QUEUE_KEY}:${uid}`) || 'null'); } catch { /* приватный режим */ }
+  if (!saved || typeof saved !== 'object') return;
+  for (const [chatId, raw] of Object.entries(saved)) {
+    const id = Number(raw) || 0;
+    if (id > 0) readEntry(chatId).want = id;
+  }
+}
+
+async function flushRead(chatId) {
+  const r = readQueue.get(chatId);
+  if (!r || r.sending || r.want <= r.ack) return;
+  if (r.timer) { clearTimeout(r.timer); r.timer = 0; }
+  const wantUid = state.me?.id;
+  const target = r.want;
+  r.sending = true;
+  let error = null;
+  try {
+    await api(`/api/chats/${chatId}/read`, { method: 'POST', body: JSON.stringify({ id: target }) });
+  } catch (e) {
+    error = e;
+  }
+  r.sending = false;
+  /* пока запрос летел, могли выйти или сменить аккаунт */
+  if (!state.me || state.me.id !== wantUid || readQueue.get(chatId) !== r) return;
+  if (!error) {
+    r.ack = Math.max(r.ack, target);
+    r.attempts = 0;
+    saveReadQueue();
+    /* пока подтверждение летело, локальный счётчик мог разойтись с сервером */
+    scheduleReadReconcile();
+    if (r.want > r.ack) flushRead(chatId);
+    return;
+  }
+  /* чат удалён или доступ отозван — повторять бессмысленно */
+  if ([400, 403, 404].includes(error.status)) {
+    readQueue.delete(chatId);
+    saveReadQueue();
+    return;
+  }
+  r.attempts += 1;
+  const wait = Math.min(30000, 1200 * 2 ** Math.min(r.attempts - 1, 5)) + Math.floor(Math.random() * 400);
+  r.timer = setTimeout(() => { r.timer = 0; flushRead(chatId); }, wait);
+}
+
+function flushAllReads(force = false) {
+  initReadQueue();
+  for (const [chatId, r] of readQueue) {
+    if (r.sending || r.want <= r.ack) continue;
+    if (r.timer && !force) continue;
+    if (r.timer) { clearTimeout(r.timer); r.timer = 0; }
+    flushRead(chatId);
+  }
+}
+
+function queueRead(chatId, id) {
+  const target = Number(id) || 0;
+  if (!chatId || target <= 0) return;
   const chat = state.chats.find((c) => c.id === chatId);
   /* предпросмотр канала без подписки не отмечаем прочитанным */
+  if (chat?.preview) return;
+  const r = readEntry(chatId);
+  if (target > r.want) r.want = target;
+  saveReadQueue();
+  flushRead(chatId);
+}
+
+function markRead(chatId) {
+  if (chatId !== state.activeId || document.hidden) return;
+  const chat = state.chats.find((c) => c.id === chatId);
   if (chat?.preview) return;
   const list = state.messages.get(chatId);
   const last = list?.[list.length - 1];
   if (!last) return;
-  api(`/api/chats/${chatId}/read`, { method: 'POST', body: JSON.stringify({ id: last.id }) }).catch(() => {});
+  queueRead(chatId, last.id);
   if (chat && chat.unread) { chat.unread = 0; scheduleRenderChats(); }
 }
+
+window.addEventListener('online', () => {
+  flushAllReads(true);
+  if (state.activeId) markRead(state.activeId);
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden || !state.me) return;
+  flushAllReads(true);
+  if (state.activeId) markRead(state.activeId);
+});
+/* страховка на случай, если таймер в фоне заснул */
+setInterval(() => { if (!document.hidden && state.me) flushAllReads(); }, 20000);
 
 /* --------------------------------------------------------------- отправка */
 
@@ -4100,6 +4264,11 @@ function resetClientState() {
   for (const url of state.blobs.values()) URL.revokeObjectURL(url);
   state.blobs.clear();
   state.rawBlobs.clear();
+  for (const r of readQueue.values()) clearTimeout(r.timer);
+  readQueue.clear();
+  readQueueUser = null;
+  clearTimeout(readReconcileTimer);
+  readReconcileTimer = 0;
   state.activeId = null;
   state.wsRetry = 0;
 }
@@ -4144,6 +4313,9 @@ function connectWs() {
     setConn(true);
     /* при первом входе список уже грузится из showApp — не дублируем */
     if (reconnect) loadChats().catch(() => {});
+    /* связь вернулась — досылаем всё, что не успело дойти */
+    flushAllReads(true);
+    if (state.activeId) markRead(state.activeId);
   });
 
   ws.addEventListener('message', (ev) => {
@@ -4171,7 +4343,7 @@ function connectWs() {
           id: m.id, body: m.body, at: m.at, mine: isMine(m),
           media: m.media?.[0]?.kind || null,
         };
-        if (m.chatId !== state.activeId && !isMine(m)) chat.unread = (chat.unread || 0) + 1;
+        if ((m.chatId !== state.activeId || document.hidden) && !isMine(m)) chat.unread = (chat.unread || 0) + 1;
         state.chats = [chat, ...state.chats.filter((c) => c.id !== m.chatId)];
         scheduleRenderChats();
         if (m.chatId === state.activeId) markRead(m.chatId);
