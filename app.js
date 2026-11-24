@@ -241,6 +241,7 @@ function ensureSnow() {
   for (let i = 0; i < 32; i++) {
     const near = Math.random() < 0.2;
     const flake = document.createElement('i');
+    const dot = document.createElement('b');
     const size = near ? (3.4 + Math.random() * 2.2) : (1.2 + Math.random() * 2.2);
     flake.style.left = (Math.random() * 100).toFixed(2) + '%';
     flake.style.width = size.toFixed(2) + 'px';
@@ -248,16 +249,10 @@ function ensureSnow() {
     flake.style.opacity = (near ? 0.2 + Math.random() * 0.2 : 0.3 + Math.random() * 0.45).toFixed(2);
     flake.style.animationDuration = (near ? 8 + Math.random() * 6 : 12 + Math.random() * 14).toFixed(1) + 's';
     flake.style.animationDelay = (-Math.random() * 24).toFixed(1) + 's';
-    /* один слой и одна анимация на снежинку: раньше внутри каждой
-       крутилась вторая анимация и висел box-shadow */
-    const drift = Math.random() * 90 - 45;
-    const cycles = 3 + Math.random() * 4;
-    const amp = near ? 3.5 : 5.5;
-    for (let k = 1; k <= 8; k++) {
-      const t = k / 8;
-      const x = drift * t + Math.sin(t * Math.PI * 2 * cycles) * amp * (1 - t * 0.15);
-      flake.style.setProperty(`--x${k}`, x.toFixed(1) + 'px');
-    }
+    flake.style.setProperty('--drift', (Math.random() * 90 - 45).toFixed(0) + 'px');
+    dot.style.animationDuration = (2.6 + Math.random() * 3.8).toFixed(1) + 's';
+    dot.style.animationDelay = (-Math.random() * 6).toFixed(1) + 's';
+    flake.append(dot);
     layer.append(flake);
   }
   snowBuilt = true;
