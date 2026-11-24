@@ -1,6 +1,6 @@
 /* PAPUZ — клиент */
-import * as K from './crypto.js?v=131';
-import * as M from './media.js?v=131';
+import * as K from './crypto.js?v=132';
+import * as M from './media.js?v=132';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -336,7 +336,7 @@ function readWallpaper() {
 
 /* спрайт узоров весит больше половины index.html: грузим его только
    когда обои действительно включены, а не на каждом открытии сайта */
-const WALL_SPRITE_URL = '/walls.svg?v=131';
+const WALL_SPRITE_URL = '/walls.svg?v=132';
 let wallDefsState = 0;
 let wallDefsWaiters = [];
 function ensureWallDefs() {

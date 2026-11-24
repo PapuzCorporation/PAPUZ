@@ -1563,13 +1563,16 @@ body.rec-voice .composer{opacity:0;pointer-events:none}
   .msg{max-width:82%}
 }
 
-/* ---- лента заканчивается над плавающим композером: сообщения не
-   выглядывают из-под стекла и не режутся пополам, когда панель ввода
-   меняет высоту или браузер прячет адресную строку ---- */
+/* ---- композер плывёт над лентой: сообщения уходят под стекло, а не
+   обрываются на его верхней границе. Лента занимает весь чат; нижний
+   отступ равен высоте панели, поэтому последнее сообщение всегда можно
+   поднять целиком над композером. ---- */
 html .chat-scroll{display:block}
-html .chat-scroll > .messages{position:absolute;inset:0 0 var(--composer-h,68px) 0;
-  padding-bottom:8px}
-html #chat-body.typing-on .messages{padding-bottom:24px}
+html .chat-scroll > .messages{position:absolute;inset:0;
+  padding-bottom:calc(var(--composer-h,68px) + 12px);
+  scroll-padding-bottom:calc(var(--composer-h,68px) + 12px)}
+html #chat-body.typing-on .messages{padding-bottom:calc(var(--composer-h,68px) + 30px);
+  scroll-padding-bottom:calc(var(--composer-h,68px) + 30px)}
 html .composer{position:absolute;left:0;right:0;bottom:0;z-index:2}
 html .typing{position:absolute;left:0;right:0;bottom:var(--composer-h,68px);z-index:2}
 html .ch-sub{position:absolute;left:0;right:0;bottom:0;z-index:2}
@@ -3089,43 +3092,57 @@ img.emoji{
   display:inline-block;pointer-events:none;
 }
 
+/* ------------------------------------ композер плывёт над лентой
+   Сообщения прокручиваются под панелью ввода, поэтому стекло плотнее
+   обычного: без backdrop-filter текст под кнопками не размывается, и
+   плотный фон оставляет от него только тень, а не вторую строку поверх
+   поля ввода. Переменные используют только кнопки композера и поле. */
+html{--glass-bg:rgba(12,18,15,.86);--glass-bg-focus:rgba(10,15,13,.93)}
+html[data-theme="black"]{--glass-bg:rgba(0,0,0,.88);--glass-bg-focus:rgba(0,0,0,.94)}
+html[data-theme="light"]{--glass-bg:rgba(255,255,255,.88);--glass-bg-focus:rgba(255,255,255,.93)}
+html[data-theme="sakura"]{--glass-bg:rgba(255,251,253,.88);--glass-bg-focus:rgba(255,252,254,.93)}
+html[data-theme="copper"]{--glass-bg:rgba(19,13,8,.86);--glass-bg-focus:rgba(15,10,6,.93)}
+html[data-theme="neon"]{--glass-bg:rgba(13,10,21,.86);--glass-bg-focus:rgba(10,7,17,.93)}
+html[data-theme="ocean"]{--glass-bg:rgba(4,11,18,.86);--glass-bg-focus:rgba(3,8,13,.93)}
+html[data-theme="simple"]{--glass-bg:rgba(17,17,17,.88);--glass-bg-focus:rgba(13,13,13,.94)}
+
 /* ------------------------------------ светлые обои в тёмных темах
    На белых и радужных обоях прозрачное стекло сливается с фоном.
    Только для этих тонов возвращаем плотное тёмное стекло композера
    и кнопок; на тёмных и «как тема» обоях остаётся прежнее светлое. */
 html[data-theme="dark"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(5,12,9,.78);
-  --glass-bg-focus:rgba(4,10,8,.88);
+  --glass-bg:rgba(5,12,9,.86);
+  --glass-bg-focus:rgba(4,10,8,.93);
   --glass-blur:blur(16px) saturate(1.08);
   --glass-muted:var(--muted);
 }
 html[data-theme="black"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(0,0,0,.78);
-  --glass-bg-focus:rgba(0,0,0,.90);
+  --glass-bg:rgba(0,0,0,.88);
+  --glass-bg-focus:rgba(0,0,0,.94);
   --glass-blur:blur(16px) saturate(1.02);
   --glass-muted:var(--muted);
 }
 html[data-theme="copper"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(17,10,6,.78);
-  --glass-bg-focus:rgba(14,8,5,.88);
+  --glass-bg:rgba(17,10,6,.86);
+  --glass-bg-focus:rgba(14,8,5,.93);
   --glass-blur:blur(16px) saturate(1.08);
   --glass-muted:var(--muted);
 }
 html[data-theme="neon"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(11,6,18,.78);
-  --glass-bg-focus:rgba(9,5,15,.88);
+  --glass-bg:rgba(11,6,18,.86);
+  --glass-bg-focus:rgba(9,5,15,.93);
   --glass-blur:blur(16px) saturate(1.1);
   --glass-muted:var(--muted);
 }
 html[data-theme="ocean"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(3,10,16,.78);
-  --glass-bg-focus:rgba(2,8,13,.88);
+  --glass-bg:rgba(3,10,16,.86);
+  --glass-bg-focus:rgba(2,8,13,.93);
   --glass-blur:blur(16px) saturate(1.08);
   --glass-muted:var(--muted);
 }
 html[data-theme="simple"][data-wallpaper]:is([data-wall-tone="light"],[data-wall-tone="colorful"]){
-  --glass-bg:rgba(14,14,14,.80);
-  --glass-bg-focus:rgba(10,10,10,.90);
+  --glass-bg:rgba(14,14,14,.88);
+  --glass-bg-focus:rgba(10,10,10,.94);
   --glass-blur:blur(16px) saturate(1.02);
   --glass-muted:var(--muted);
 }
