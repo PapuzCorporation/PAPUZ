@@ -1,3 +1,17 @@
+/* движок стекла: safari / full / clone; ?glass=... — принудительно для тестов */
+(function () {
+  var f = (new URLSearchParams(location.search).get('glass') || '').toLowerCase();
+  if (f === 'safari' || f === 'full' || f === 'clone') {
+    document.documentElement.dataset.glass = f;
+    return;
+  }
+  var u = navigator.userAgent;
+  var ios = /iPad|iPhone|iPod/.test(u) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var ff = !ios && /Firefox|FxiOS/i.test(u);
+  var sf = ios || (/Safari/i.test(u) && !/Chrome|Chromium|CriOS|Edg|OPR|Android|Firefox|FxiOS/i.test(u));
+  document.documentElement.dataset.glass = sf ? 'safari' : ff ? 'full' : 'clone';
+})();
+
 /* тема применяется до первой отрисовки, чтобы не было вспышки */
 (function () {
   try {
