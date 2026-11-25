@@ -268,14 +268,15 @@ body{
   margin:0;background:var(--bg);color:var(--ink);
   font:400 15px/1.45 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
-  overflow:hidden;
+  height:100dvh;overflow:hidden;
 }
 button,input,textarea{font:inherit;color:inherit}
 button{background:none;border:0;cursor:pointer}
 ::selection{background:var(--selection)}
 
 /* ---------------------------------------------------------------- фон */
-.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg-grad)}
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg-grad);
+  transform:translate3d(0,0,0);contain:layout paint style;pointer-events:none}
 /* три больших слоя остаются на месте: картинка та же, но GPU не
    перерисовывает их каждую секунду ни на телефоне, ни на компьютере */
 .glow{position:absolute;border-radius:50%;opacity:var(--glow-opacity)}
@@ -283,13 +284,14 @@ button{background:none;border:0;cursor:pointer}
 .g2{width:60vmax;height:60vmax;right:-22vmax;bottom:-24vmax;background:var(--glow-2)}
 .g3{width:44vmax;height:44vmax;left:38%;top:44%;background:var(--glow-3)}
 .grain{position:absolute;inset:0;opacity:var(--grain-opacity);
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E")}
+  background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAAAAABWESUoAAAEK0lEQVR42gEgBN/7AKVNyhglMLsdbRMs3tYjey7ZHj9yH8sZcRdElNZJPJ1cA+IgKcb19v27JSqIAtor9Qbi3GV4ISgUox6WnxrRtgx7ASd5DgVL6zoMW2gv/n9GrTTsWuHJoeXBIlEkrzxN/TYrAVWQ6MG4lrJG4wu0190w8ykBj/JlKQpySIzn5p3bzt8DAMzJNfbNH2EiauFTOK4aNABNM7oNJGrATIGxuvI+O/nuA48YCWHNAGUffWe5SC7izpK8VRzxeuIP+OrwM5UNrLw8AA6P8YRjsOSyuilwNHTwZKxo9wD1sCs9xmb0W96qLMrtA8Z9w+3kltRvdrkC3OJx0Nv5P/TAgGQO/P7vBCWD6EEZANdCTQnhXQJMWEjyPR+m9zYdf2GNFTLnDiDipmaN5/R+Aq0lmD304caWSd2JngbGpAgyPOj0Mb2JIqsXrQzF9dovAlP90V1afUHLSbyO6YQrhfsmeuIGRSXsWnffMV36IdmAAyOk9FmhGb/T+ndYiCKvuXVwZAm6sGXN8TxqDtJGzshJAlY+Ldjk9wrahDeCW1349fgcyOUzmesPfSsC5qCF5nO/AjjQOd9zFgXkVe+WZx1Q3avc4KMpwFEWMfqo6Oxq5KOvAC6HLUnMFckLmZt3K0/Hpv1MkUoW20cIdSsPFUS4NcDnABkJffqHAekjLyHygSaHeGl26/zDJ/WTF2UnS6mCm0QGA+qgqpCqVk4GMZT/N7IFMKeiGhI/n1jNdtYiy8fwFVPkApkawu3Mic94vxQN+JM0qaq+uA1Tghod52DSPthM+wbeAMnHJ7jbjBiPNBqSTH+I36Fhv9sOzGgpGdLmRpL4GUFXA434Mt3j8DhF+VBhKJnzuK0naoSo0V1TztbYzfkHymz9AbzI46PJ8Q+YVcojcuCPKoguwVv1RQgY+cJsNs/JGQgGASWjJ/aauDvd/uqzQensQDeciKY/X1r58nXJZL/tjgWVBMaj2dt3+Qa/xMsy71ic2FJw2ZjklcMVnCogBOCelY3PA4ihHNbLd7tI653U2xFA7p37akoBnMSoWqbzNU8sn/sMBKv7v5EhKVD+6qtZ4cq2Zw1pDiT9tvTKw0+7lHJaq35DAbo4HcOsUUWsUdwz/2TgvY0M0iBrcBzrC2kg62u/vfvXAIDc/EP+XQSbTXino+u5KGXIUX7QIRH2plLaNSSHK2oxAdco5XQfzZEWjcZYAPn6NcQD4Hue4R771kLQR3qptv35ADPtEjQC83blvxSWdz0ZYWMmvlvlhQM2s28TvK5IFmiCABNoBafRvl6fJ2gQ/fcg0DPKTy5Ty4rRkZ3VGp+21NUJALpkyM9oA95Q2Douz7rrU0IHGkjLLb1XSrKRUlciN8T7BKs2eNbhOT2rVCYfAKo4ChzTsoT5ioINNLCz/pLliyKhTz8MEeA3vD8AAAAASUVORK5CYII=");
+  background-size:64px 64px}
 
 /* снег — режим для всех тем */
 .snow{position:fixed;inset:0;z-index:2;pointer-events:none;overflow:hidden;display:none;contain:strict}
 html[data-snow="on"] .snow{display:block}
 
-.snow i{position:absolute;top:0;left:0;animation:snowfall linear infinite;will-change:transform}
+.snow i{position:absolute;top:0;left:0;animation:snowfall linear infinite;contain:layout style}
 .snow i b{display:block;width:100%;height:100%;border-radius:50%;background:var(--snow-ink,#f4fbff);
   box-shadow:0 0 4px var(--snow-glow,rgba(200,235,255,.42));
   animation:snowsway ease-in-out infinite alternate}
@@ -308,7 +310,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 }
 
 /* -------------------------------------------------------------- вход */
-.auth{position:relative;z-index:1;height:100%;display:grid;place-items:center;padding:24px;overflow:auto}
+.auth{position:relative;z-index:1;height:100%;height:100dvh;display:grid;place-items:center;padding:24px;overflow:auto}
 .auth-inner{width:min(420px,100%);animation:rise .8s var(--ease) both}
 .brand-block{text-align:center;margin-bottom:26px}
 .brand{
@@ -374,7 +376,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .btn.danger-ghost:hover{background:var(--danger-soft)}
 
 /* ------------------------------------------------------------- каркас */
-.app{position:relative;z-index:1;height:100%;height:var(--app-h,100%);padding:clamp(0px,1.2vw,16px)}
+.app{position:relative;z-index:1;height:100%;height:100dvh;height:var(--app-h,100dvh);padding:clamp(0px,1.2vw,16px)}
 .shell{
   height:100%;display:grid;grid-template-columns:376px 1fr;gap:12px;
   min-width:0;border-radius:26px;overflow:hidden;
@@ -652,7 +654,8 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 
 .typing{display:flex;gap:4px;padding:0 20px 6px;height:0;opacity:0;transition:.25s var(--ease)}
 .typing.on{height:16px;opacity:1}
-.typing span{width:5px;height:5px;border-radius:50%;background:var(--mint);animation:bounce 1.3s infinite}
+.typing span{width:5px;height:5px;border-radius:50%;background:var(--mint)}
+.typing.on span{animation:bounce 1.3s infinite}
 .typing span:nth-child(2){animation-delay:.15s}
 .typing span:nth-child(3){animation-delay:.3s}
 @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
@@ -724,6 +727,51 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .glass-list::-webkit-scrollbar{display:none}
 .glass-list *{animation:none!important;transition:none!important}
 
+/* ------------------------------------------------ режимы стекла
+   clone — размытая копия ленты (Chrome, WebView, Edge, Яндекс);
+   safari — нативный многослойный -webkit-backdrop-filter без SVG;
+   full — backdrop-filter с SVG-преломлением (Firefox).
+   В safari/full копия не нужна и не строится, поэтому лента не режется. */
+.glass-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
+html[data-glass="safari"] .glass-strip,
+html[data-glass="full"] .glass-strip{display:none!important}
+
+html[data-glass="safari"] .c-btn,
+html[data-glass="safari"] .c-field,
+html[data-glass="full"] .c-btn,
+html[data-glass="full"] .c-field{
+  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.03) 52%,rgba(255,255,255,.09)),var(--glass-bg,var(--card-bg));
+  border-color:var(--line-strong);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 24px -18px rgba(0,0,0,.55)
+}
+html[data-glass="safari"] .c-btn[aria-expanded="true"],
+html[data-glass="full"] .c-btn[aria-expanded="true"]{
+  background:var(--send-grad-press),var(--glass-bg,var(--card-bg));
+  border-color:var(--send-line-press)
+}
+html[data-glass="safari"] .c-field:focus-within,
+html[data-glass="full"] .c-field:focus-within{
+  background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.04) 52%,rgba(255,255,255,.10)),var(--glass-bg-focus,var(--input-bg-focus))
+}
+html[data-glass="safari"] .c-btn,
+html[data-glass="safari"] .c-field,
+html[data-glass="safari"] .attach-menu{
+  -webkit-backdrop-filter:blur(18px) saturate(1.45) brightness(1.04);
+  backdrop-filter:blur(18px) saturate(1.45) brightness(1.04)
+}
+html[data-glass="full"] .c-btn,
+html[data-glass="full"] .c-field,
+html[data-glass="full"] .attach-menu{
+  backdrop-filter:blur(16px) saturate(1.25);
+  backdrop-filter:blur(16px) saturate(1.25) url(#glass-warp)
+}
+/* в Gecko длинные списки карточек с многослойными тенями роняют FPS */
+html[data-glass="full"] .card,
+html[data-glass="full"] .set-profile,
+html[data-glass="full"] .announce-card{
+  box-shadow:0 10px 30px -24px rgba(0,0,0,.55)
+}
+
 /* подписка на канал вместо поля ввода, пока не подписан */
 .ch-sub{display:flex;align-items:center;justify-content:center;
   padding:10px max(14px, calc((100% - 880px) / 2)) calc(12px + env(safe-area-inset-bottom))}
@@ -732,7 +780,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 /* ------------------------------------------------------------ профиль */
 .sheet{position:fixed;top:var(--app-top,0);left:0;right:0;height:100%;height:100dvh;height:var(--app-h,100dvh);
   z-index:60;display:flex;justify-content:flex-end}
-.sheet-backdrop{position:absolute;inset:0;background:var(--backdrop);backdrop-filter:blur(2px);
+.sheet-backdrop{position:absolute;inset:0;background:var(--backdrop);
   animation:fadeIn .28s ease both}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .sheet-panel{
@@ -1467,8 +1515,7 @@ html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
 .rec{position:fixed;inset:0;z-index:70;display:flex;align-items:flex-end;justify-content:center;
   pointer-events:none;animation:fadeIn .18s ease both}
 .rec.is-circle{align-items:center;flex-direction:column;justify-content:center;
-  background:var(--rec-veil);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  background:var(--rec-veil)}
 .rec-bar{pointer-events:auto;display:flex;align-items:center;gap:10px;width:min(560px, calc(100% - 20px));
   margin:0 auto calc(10px + env(safe-area-inset-bottom));padding:8px 10px 8px 8px;border-radius:20px;
   background:var(--rec-bar-bg);border:1px solid var(--rec-line);
@@ -1516,7 +1563,7 @@ body.rec-voice .composer{opacity:0;pointer-events:none}
 
 /* ---- шторка плеера ---- */
 .aud{position:fixed;inset:0;z-index:66;display:flex;align-items:flex-end;justify-content:center}
-.aud-backdrop{position:absolute;inset:0;background:var(--backdrop);backdrop-filter:blur(3px);
+.aud-backdrop{position:absolute;inset:0;background:var(--backdrop);
   animation:fadeIn .2s ease both}
 .aud-panel{position:relative;width:min(440px,100%);
   margin:0 10px calc(10px + env(safe-area-inset-bottom));padding:16px 16px 22px;border-radius:26px;
@@ -1597,9 +1644,9 @@ body.rec-voice .composer{opacity:0;pointer-events:none}
   .shell{grid-template-columns:minmax(0,1fr);border-radius:0;gap:0;border:0;width:100%;max-width:100%}
   .side{border-right:0;width:100%;max-width:100%;overflow-x:clip}
   .chat{position:fixed;top:var(--app-top,0);left:0;right:0;height:100%;height:100dvh;height:var(--app-h,100dvh);
-    z-index:30;background:var(--chat-mobile-bg);
+    z-index:30;background:var(--chat-mobile-bg);content-visibility:hidden;
     transform:translateX(100%);transition:transform .34s var(--ease)}
-  .shell.chat-open .chat{transform:none}
+  .shell.chat-open .chat{transform:none;content-visibility:visible}
   .back{display:grid}
   .chat-empty{display:none}
   .messages{padding:14px 12px 6px}

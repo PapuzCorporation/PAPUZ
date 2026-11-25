@@ -2375,10 +2375,12 @@ async function renderMessages(chatId, { keepScroll = false, reveal = false } = {
   if (reveal) {
     $('#chat-empty').hidden = true;
     $('#chat-body').hidden = false;
+    /* сначала показываем чат: на телефоне скрытый экран не раскладывается
+       (content-visibility), и высоту композера иначе не измерить */
+    $('.shell').classList.add('chat-open');
     /* высоту композера меряем до прокрутки: низ ленты не должен
        оказаться под кнопками */
     syncComposerHeight();
-    $('.shell').classList.add('chat-open');
   }
 
   wrap.replaceChildren(frag);
@@ -4926,6 +4928,20 @@ function syncViewportBox() {
   /* при сильном зуме не сжимаем интерфейс — даём браузеру приблизить страницу */
   if (vv && vv.scale > 1.01) return;
   const root = document.documentElement;
+  /* Firefox: 100dvh сам учитывает плавающую адресную строку, поэтому
+     не подменяем высоту на каждом движении visualViewport. Исключение —
+     открытая клавиатура: там нужна реальная видимая высота. */
+  if (root.dataset.glass === 'full') {
+    const keyboard = vv && vv.height < window.innerHeight - 150;
+    if (!keyboard) {
+      if (root.dataset.viewport !== 'dvh') {
+        root.dataset.viewport = 'dvh';
+        root.style.removeProperty('--app-top');
+        root.style.removeProperty('--app-h');
+      }
+      return;
+    }
+  }
   const top = vv ? Math.round(vv.offsetTop) : 0;
   const height = vv ? Math.round(vv.height) : window.innerHeight;
   const stamp = `${top}:${height}`;
@@ -4981,6 +4997,9 @@ if (window.visualViewport) {
    задаёт маска. В копию берём только сообщения у полосы композера и заранее
    запоминаем их высоты, чтобы прокрутка не вызывала пересчёт ленты. */
 (() => {
+  /* копию ленты строим только для clone: в safari/full работает
+     нативный backdrop-filter, и JS не должен трогать DOM на скролле */
+  if ((document.documentElement.dataset.glass || 'clone') !== 'clone') return;
   const strip = $('#glass-strip');
   const shift = $('#glass-shift');
   const wall = $('#glass-wall');
@@ -5223,7 +5242,7 @@ if (window.visualViewport) {
   }
 
   function sync() {
-    if (!clone) return;
+    if (!clone || body.hidden || composer.hidden) return;
     const d = builtTop - list.scrollTop;
     if (Math.abs(d) > REBUILD) {
       build();
