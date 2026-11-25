@@ -650,6 +650,7 @@ function hideBoot() {
 
 function showAuth() {
   hideBoot();
+  document.documentElement.dataset.screen = 'auth';
   $('#app').hidden = true;
   $('#auth').hidden = false;
   $('#auth-form').reset();
@@ -659,6 +660,7 @@ function showAuth() {
 
 function showApp() {
   hideBoot();
+  document.documentElement.dataset.screen = 'app';
   $('#auth').hidden = true;
   $('#app').hidden = false;
   avatarEl($('#me-avatar'), state.me, 'av-sm');
