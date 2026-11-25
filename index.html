@@ -34,7 +34,7 @@
 <meta name="twitter:title" content="PAPUZ">
 <meta name="twitter:description" content="Тихий мессенджер для своих">
 <meta name="twitter:image" content="https://papuz.ru/og-image.png">
-<link rel="stylesheet" href="/app.css?v=140">
+<link rel="stylesheet" href="/app.css?v=141">
 <link rel="modulepreload" href="/crypto.js?v=134">
 <link rel="modulepreload" href="/media.js?v=134">
 <script type="application/ld+json">
@@ -82,8 +82,8 @@
 <svg class="glass-defs" width="0" height="0" aria-hidden="true" focusable="false">
   <filter id="glass-warp" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
     <feTurbulence type="fractalNoise" baseFrequency="0.006 0.009" numOctaves="1" seed="11" result="noise"/>
-    <feGaussianBlur in="noise" stdDeviation="1.2" result="soft"/>
-    <feDisplacementMap in="SourceGraphic" in2="soft" scale="6" xChannelSelector="R" yChannelSelector="G"/>
+    <feGaussianBlur in="noise" stdDeviation="1" result="soft"/>
+    <feDisplacementMap in="SourceGraphic" in2="soft" scale="3" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
 </svg>
 
@@ -865,6 +865,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/twemoji.min.js"></script>
-<script src="/app.js?v=140" type="module"></script>
+<script src="/app.js?v=141" type="module"></script>
 </body>
 </html>

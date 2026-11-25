@@ -736,34 +736,68 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 html[data-glass="safari"] .glass-strip,
 html[data-glass="full"] .glass-strip{display:none!important}
 
+/* Пилюли: фон и фильтры живут на пустых слоях ::before/::after, а текст,
+   плейсхолдер «Сообщение…» и иконки подняты выше (z-index:2) и не имеют
+   ни filter, ни backdrop-filter. Иначе Gecko прогоняет содержимое через
+   url(#glass-warp) и мнёт буквы прямо в поле ввода. */
 html[data-glass="safari"] .c-btn,
 html[data-glass="safari"] .c-field,
 html[data-glass="full"] .c-btn,
 html[data-glass="full"] .c-field{
-  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.03) 52%,rgba(255,255,255,.09)),var(--glass-bg,var(--card-bg));
+  position:relative;
+  background:none;
   border-color:var(--line-strong);
+  box-shadow:none
+}
+html[data-glass="safari"] .c-btn > *,
+html[data-glass="safari"] .c-field > *,
+html[data-glass="full"] .c-btn > *,
+html[data-glass="full"] .c-field > *{
+  position:relative;z-index:2;
+  filter:none;-webkit-filter:none
+}
+html[data-glass="safari"] .c-btn::before,
+html[data-glass="safari"] .c-field::before,
+html[data-glass="full"] .c-btn::before,
+html[data-glass="full"] .c-field::before{
+  content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.03) 52%,rgba(255,255,255,.09)),var(--glass-bg,var(--card-bg));
   box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 24px -18px rgba(0,0,0,.55)
 }
 html[data-glass="safari"] .c-btn[aria-expanded="true"],
-html[data-glass="full"] .c-btn[aria-expanded="true"]{
-  background:var(--send-grad-press),var(--glass-bg,var(--card-bg));
-  border-color:var(--send-line-press)
+html[data-glass="full"] .c-btn[aria-expanded="true"]{border-color:var(--send-line-press)}
+html[data-glass="safari"] .c-btn[aria-expanded="true"]::before,
+html[data-glass="full"] .c-btn[aria-expanded="true"]::before{
+  background:var(--send-grad-press),var(--glass-bg,var(--card-bg))
 }
 html[data-glass="safari"] .c-field:focus-within,
-html[data-glass="full"] .c-field:focus-within{
+html[data-glass="full"] .c-field:focus-within{border-color:var(--input-focus-line)}
+html[data-glass="safari"] .c-field:focus-within::before,
+html[data-glass="full"] .c-field:focus-within::before{
   background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.04) 52%,rgba(255,255,255,.10)),var(--glass-bg-focus,var(--input-bg-focus))
 }
-html[data-glass="safari"] .c-btn,
-html[data-glass="safari"] .c-field,
-html[data-glass="safari"] .attach-menu{
+html[data-glass="safari"] .c-btn::before,
+html[data-glass="safari"] .c-field::before{
   -webkit-backdrop-filter:blur(18px) saturate(1.45) brightness(1.04);
   backdrop-filter:blur(18px) saturate(1.45) brightness(1.04)
 }
-html[data-glass="full"] .c-btn,
-html[data-glass="full"] .c-field,
+html[data-glass="full"] .c-btn::before,
+html[data-glass="full"] .c-field::before{
+  backdrop-filter:blur(16px) saturate(1.25)
+}
+/* Преломление — отдельный слой и только по краю линзы: радиальная маска
+   оставляет центр ровным, а искажение живёт у контура пилюли. */
+html[data-glass="full"] .c-btn::after,
+html[data-glass="full"] .c-field::after{
+  content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;
+  backdrop-filter:blur(20px) saturate(1.3) url(#glass-warp);
+  -webkit-mask-image:radial-gradient(115% 115% at 50% 50%,transparent 62%,#000 100%);
+  mask-image:radial-gradient(115% 115% at 50% 50%,transparent 62%,#000 100%)
+}
+/* меню скрепки — плотное, без фильтров: подписи не должны плыть */
+html[data-glass="safari"] .attach-menu,
 html[data-glass="full"] .attach-menu{
-  backdrop-filter:blur(16px) saturate(1.25);
-  backdrop-filter:blur(16px) saturate(1.25) url(#glass-warp)
+  -webkit-backdrop-filter:none;backdrop-filter:none
 }
 /* в Gecko длинные списки карточек с многослойными тенями роняют FPS */
 html[data-glass="full"] .card,
