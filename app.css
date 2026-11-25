@@ -1644,7 +1644,7 @@ body.rec-voice .composer{opacity:0;pointer-events:none}
   .shell{grid-template-columns:minmax(0,1fr);border-radius:0;gap:0;border:0;width:100%;max-width:100%}
   .side{border-right:0;width:100%;max-width:100%;overflow-x:clip}
   .chat{position:fixed;top:var(--app-top,0);left:0;right:0;height:100%;height:100dvh;height:var(--app-h,100dvh);
-    z-index:30;background:var(--chat-mobile-bg);content-visibility:hidden;
+    z-index:30;background:var(--chat-mobile-bg);content-visibility:auto;contain-intrinsic-size:auto 100dvh;
     transform:translateX(100%);transition:transform .34s var(--ease)}
   .shell.chat-open .chat{transform:none;content-visibility:visible}
   .back{display:grid}
