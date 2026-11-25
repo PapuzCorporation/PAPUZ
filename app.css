@@ -723,7 +723,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   opacity:0;transition:opacity .16s linear}
 .glass-shift.on{opacity:1}
 .glass-list{position:absolute;overflow:hidden;pointer-events:none;scrollbar-width:none;
-  background:transparent}
+  background:transparent;will-change:transform}
 .glass-list::-webkit-scrollbar{display:none}
 .glass-list *{animation:none!important;transition:none!important}
 

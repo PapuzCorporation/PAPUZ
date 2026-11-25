@@ -5241,17 +5241,38 @@ if (window.visualViewport) {
     }
   }
 
+  /* сдвиг копии — только transform и строго в кадре отрисовки.
+     Никаких transition, setTimeout и замеров геометрии на прокрутке:
+     скролл-событие приходит раз в кадр, rAF-флаг склеивает лишние
+     вызовы, а копия двигается ровно на ту же величину, что и лента. */
+  let ticking = false;
+  let rebuildRaf = 0;
+
   function sync() {
     if (!clone || body.hidden || composer.hidden) return;
     const d = builtTop - list.scrollTop;
-    if (Math.abs(d) > REBUILD) {
-      build();
-      return;
-    }
     clone.style.transform = `translate3d(0,${d}px,0)`;
+    /* окно копии кончилось — пересобираем не в обработчике скролла,
+       а отдельным кадром, чтобы не запинаться на быстром свайпе */
+    if (Math.abs(d) > REBUILD && !rebuildRaf) {
+      rebuildRaf = requestAnimationFrame(() => {
+        rebuildRaf = 0;
+        build();
+      });
+    }
   }
 
-  list.addEventListener('scroll', sync, { passive: true });
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      sync();
+    });
+  }
+
+  list.addEventListener('scroll', onScroll, { passive: true });
+  list.addEventListener('touchmove', onScroll, { passive: true });
 
   new MutationObserver(() => invalidate(90)).observe(list, {
     childList: true,
