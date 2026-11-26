@@ -3782,14 +3782,27 @@ async function openGroupSheet(chatId) {
   $('#g-leave').textContent = chat.type === 'channel' ? 'Покинуть канал' : 'Покинуть чат';
   $('#g-confirm-text').textContent = `Удалить ${noun} навсегда? Все сообщения и файлы исчезнут у ${who}.`;
   groupAvatar($('#g-avatar'), chat, 'av-xl');
-  $('#g-name').textContent = chat.title;
+  const gName = $('#g-name');
+  gName.textContent = chat.title;
+  const chanSince = chat.type === 'channel' ? regDate(chat.createdAt) : '';
+  if (chanSince) gName.dataset.since = chanSince;
+  else delete gName.dataset.since;
   const canEdit = chat.role === 'owner' || chat.role === 'admin';
   const subs = chat.type === 'channel'
     ? `${members.length} ${plural(members.length, 'подписчик', 'подписчика', 'подписчиков')}`
     : `${members.length} ${plural(members.length, 'участник', 'участника', 'участников')}`;
-  $('#g-sub').textContent = chat.type === 'channel'
-    ? (chat.username ? `@${chat.username} · ${subs}` : (canEdit ? `юзернейм не задан · ${subs}` : subs))
-    : subs;
+  const gSub = $('#g-sub');
+  gSub.textContent = '';
+  if (chat.type === 'channel' && chat.username) {
+    const nick = document.createElement('span');
+    nick.className = 'nick-copy';
+    nick.textContent = '@' + chat.username;
+    gSub.append(nick, document.createTextNode(` · ${subs}`));
+  } else {
+    gSub.textContent = chat.type === 'channel'
+      ? (canEdit ? `юзернейм не задан · ${subs}` : subs)
+      : subs;
+  }
   $('#g-about').textContent = chat.about || '';
   $('#g-about').hidden = !chat.about;
   $('#g-form').hidden = !canEdit;
@@ -4078,14 +4091,17 @@ function peerSinceToast() {
 $('#p-name').addEventListener('click', peerSinceToast);
 
 /* тап по @юзернейму — тихо копируем, без подсказок */
-$('#p-nick').addEventListener('click', () => {
-  const nick = $('#p-nick').textContent.trim();
+$('#p-nick').addEventListener('click', () => copySilently($('#p-nick').textContent.trim()));
+
+/* тихое копирование: без плашек и тостов */
+function copySilently(text) {
+  if (!text) return;
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(nick).catch(() => fallbackCopy(nick));
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
     return;
   }
-  fallbackCopy(nick);
-});
+  fallbackCopy(text);
+}
 function fallbackCopy(text) {
   try {
     const ta = document.createElement('textarea');
@@ -4099,25 +4115,16 @@ function fallbackCopy(text) {
   } catch { /* беззвучно */ }
 }
 
-/* тап по аватарке — полноэкранный просмотр */
-$('#p-avatar').addEventListener('click', () => {
-  const img = $('#p-avatar img');
-  if (!img) return;
-  openAvatarLightbox(img.src);
+/* канал: имя — когда создан, @юзернейм — тихое копирование */
+$('#g-name').addEventListener('click', () => {
+  const since = $('#g-name').dataset.since;
+  if (!since) return;
+  toast(`на PAPUZ с ${since}`, 3500);
 });
-
-function openAvatarLightbox(url) {
-  const box = $('#lightbox');
-  const img = $('#lb-img');
-  const video = $('#lb-video');
-  video.hidden = true;
-  video.pause?.();
-  video.removeAttribute('src');
-  img.src = url;
-  img.hidden = false;
-  box.hidden = false;
-  document.body.style.overflow = 'hidden';
-}
+$('#g-sub').addEventListener('click', (e) => {
+  const nick = e.target.closest('.nick-copy');
+  if (nick) copySilently(nick.textContent.trim());
+});
 
 /* из профиля — сразу в личный чат */
 $('#p-chat').addEventListener('click', () => {
