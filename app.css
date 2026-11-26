@@ -538,7 +538,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   border-bottom:1px solid var(--line);
   background:var(--head-grad)}
 .back{display:none}
-.chat-head-meta{flex:1;min-width:0;cursor:pointer}
+.chat-head-meta{flex:1;min-width:0}
 .lock{display:grid;place-items:center;color:var(--mint);opacity:.6;padding:0 4px}
 .lock.off{color:var(--muted-2);opacity:.4}
 .chat-head-name{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -844,7 +844,9 @@ html[data-glass="full"] .announce-card{
   background:var(--av-edit-bg);border:1px solid var(--line-strong);color:var(--muted);cursor:pointer;transition:.2s}
 .av-edit:hover{color:var(--send-ink);background:var(--accent-grad-2)}
 .pf-name{margin:14px 0 2px;font-size:22px;font-weight:500;letter-spacing:-.01em}
-.pf-nick{color:var(--muted-2);font-size:13.5px}
+.pf-nick{color:var(--muted-2);font-size:13.5px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:opacity .15s}
+.pf-nick:active{opacity:.55}
 #p-bio{
   margin:10px 0 12px;color:var(--ink);font-size:14px;line-height:1.5;
   white-space:pre-wrap;overflow-wrap:anywhere;
@@ -853,8 +855,6 @@ html[data-glass="full"] .announce-card{
 .pf-row{display:flex;align-items:center;gap:10px;margin:12px 0 18px}
 .pf-row .status-pill{min-width:0}
 #p-status{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pf-since{margin:-8px 0 16px;color:var(--muted-2);font-size:12px;letter-spacing:.01em}
-.pf-since[hidden]{display:none}
 .pf-chat-btn{width:auto;margin-left:auto;padding:8px 16px;border-radius:20px;font-size:12.5px;flex:none}
 .status-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:20px;
   background:var(--pill-bg);border:1px solid var(--pill-line);font-size:12px;color:var(--pill-ink)}

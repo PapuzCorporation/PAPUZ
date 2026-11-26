@@ -4023,17 +4023,12 @@ $('#g-leave').addEventListener('click', async () => {
   }
 });
 
-function openActivePeer() {
+$('#btn-peer').addEventListener('click', () => {
   const chat = state.chats.find((c) => c.id === state.activeId);
   if (!chat) return;
   if (chat.type === 'dm') return openPeerSheet(chat);
   openGroupSheet(chat.id);
-}
-$('#btn-peer').addEventListener('click', openActivePeer);
-/* по нику и аватарке в шапке чата — тот же профиль */
-const headMeta = document.querySelector('.chat-head-meta');
-if (headMeta) headMeta.addEventListener('click', openActivePeer);
-$('#peer-avatar').addEventListener('click', openActivePeer);
+});
 
 /* профиль собеседника в личном чате */
 const peerSheet = $('#sheet-peer');
@@ -4064,9 +4059,9 @@ function paintPeerSheet(peer) {
   $('#p-bio').classList.toggle('is-empty', !bio);
   setPeerSheetStatus(peer);
   const since = regDate(peer.createdAt);
-  const sinceEl = $('#p-since');
-  sinceEl.textContent = since ? `на PAPUZ с ${since}` : '';
-  sinceEl.hidden = !since;
+  const nickEl = $('#p-nick');
+  if (since) nickEl.dataset.since = since;
+  else delete nickEl.dataset.since;
   /* «Написать» есть всегда, кроме профиля, открытого из чата
      с этим человеком: там поле ввода и так под рукой */
   $('#p-chat').hidden = !!state.peerSheetId;
@@ -4074,6 +4069,12 @@ function paintPeerSheet(peer) {
     $('#p-enc').textContent = f === '—' ? 'у собеседника нет ключа' : `ключ: ${f}`;
   });
 }
+
+/* тап по @нику — когда человек зарегистрировался */
+$('#p-nick').addEventListener('click', () => {
+  const since = $('#p-nick').dataset.since;
+  toast(since ? `на PAPUZ с ${since}` : 'дата регистрации недоступна', 3500);
+});
 
 /* из профиля — сразу в личный чат */
 $('#p-chat').addEventListener('click', () => {
