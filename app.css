@@ -143,6 +143,7 @@
   --c-btn-bg:rgba(255,255,255,.055);
   --c-btn-line:rgba(180,235,200,.12);
   --c-btn-bg-active:rgba(255,255,255,.1);
+  --glass-shadow:inset 0 1px 1px rgba(255,255,255,.16),0 10px 24px -18px rgba(0,0,0,.55);
   --input-bg:rgba(0,0,0,.34);
   --input-bg-focus:rgba(0,0,0,.44);
   --send-ink:#08140d;
@@ -674,15 +675,15 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .composer{display:flex;align-items:flex-end;gap:7px;
   padding:8px max(12px, calc((100% - 880px) / 2)) calc(8px + env(safe-area-inset-bottom))}
 .c-btn{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;
-  color:var(--c-btn-ink);background:var(--glass-bg,var(--card-bg));border:1px solid var(--c-btn-line);
-  box-shadow:inset 0 1px 1px rgba(255,255,255,.16),0 10px 24px -18px rgba(0,0,0,.55);
+  color:var(--c-btn-ink);background:var(--glass-bg,var(--card-bg));border:1px solid var(--glass-line,var(--c-btn-line));
+  box-shadow:var(--glass-shadow);
   transition:transform .16s var(--ease),background .2s,color .2s}
 .c-btn .ico{width:21px;height:21px;pointer-events:none}
 .c-btn:active{transform:scale(.93);background:var(--c-btn-bg-active)}
 .c-btn[aria-expanded="true"]{color:var(--send-fg);background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}
 .c-field{flex:1;min-width:0;display:flex;align-items:flex-end;padding:2px 4px 2px 15px;border-radius:22px;
-  background:var(--glass-bg,var(--card-bg));border:1px solid var(--line);
-  box-shadow:inset 0 1px 1px rgba(255,255,255,.14),0 10px 24px -18px rgba(0,0,0,.55);
+  background:var(--glass-bg,var(--card-bg));border:1px solid var(--glass-line,var(--line));
+  box-shadow:var(--glass-shadow);
   transition:border-color .2s,background .2s}
 .c-field:focus-within{border-color:var(--input-focus-line);background:var(--glass-bg-focus,var(--input-bg-focus))}
 .c-field textarea{flex:1;min-width:0;resize:none!important;padding:9px 0;background:none;border:0;outline:none;
@@ -690,7 +691,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;-webkit-appearance:none;appearance:none}
 .c-field textarea::-webkit-resizer{display:none;width:0;height:0;background:none}
 .c-field textarea::-webkit-scrollbar{width:0;height:0;display:none}
-.c-field textarea::placeholder{color:var(--muted-2)}
+.c-field textarea::placeholder{color:var(--glass-muted,var(--muted-2))}
 .send{
   position:relative;width:42px;height:42px;flex:none;border-radius:50%;
   display:grid;place-items:center;color:var(--send-fg);
@@ -750,7 +751,7 @@ html[data-glass="full"] .c-btn,
 html[data-glass="full"] .c-field{
   position:relative;
   background:none;
-  border-color:var(--line-strong);
+  border-color:var(--glass-line,var(--line-strong));
   box-shadow:none
 }
 html[data-glass="safari"] .c-btn > *,
@@ -766,7 +767,7 @@ html[data-glass="full"] .c-btn::before,
 html[data-glass="full"] .c-field::before{
   content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none;
   background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.03) 52%,rgba(255,255,255,.09)),var(--glass-bg,var(--card-bg));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 24px -18px rgba(0,0,0,.55)
+  box-shadow:var(--glass-shadow)
 }
 html[data-glass="safari"] .c-btn[aria-expanded="true"],
 html[data-glass="full"] .c-btn[aria-expanded="true"]{border-color:var(--send-line-press)}
@@ -1833,6 +1834,9 @@ html[data-theme="light"]{
   --glass-bg:rgba(255,255,255,.34);
   --glass-bg-focus:rgba(255,255,255,.50);
   --glass-blur:blur(16px) brightness(1.42) saturate(1.05);
+  --glass-line:rgba(25,70,45,.22);
+  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 12px 26px -16px rgba(25,70,45,.32);
+  --glass-muted:#3a5646;
   --switch-knob:#fff;
   --switch-knob-shadow:0 1px 2px rgba(20,55,38,.28);
   --play-bg:linear-gradient(135deg,#63cf94,#1f9c68);
@@ -2357,6 +2361,7 @@ html[data-theme="neon"]{
   --c-btn-bg:rgba(255,255,255,.055);
   --c-btn-line:rgba(235,180,230,0.12);
   --c-btn-bg-active:rgba(255,255,255,.1);
+  --glass-shadow:inset 0 1px 1px rgba(255,255,255,.16),0 10px 24px -18px rgba(0,0,0,.55);
   --input-bg:rgba(0,0,0,.34);
   --input-bg-focus:rgba(0,0,0,.44);
   --send-ink:#140813;
@@ -2607,6 +2612,7 @@ html[data-theme="ocean"]{
   --c-btn-bg:rgba(255,255,255,.055);
   --c-btn-line:rgba(180,219,235,0.12);
   --c-btn-bg-active:rgba(255,255,255,.1);
+  --glass-shadow:inset 0 1px 1px rgba(255,255,255,.16),0 10px 24px -18px rgba(0,0,0,.55);
   --input-bg:rgba(0,0,0,.34);
   --input-bg-focus:rgba(0,0,0,.44);
   --send-ink:#081014;
@@ -2760,6 +2766,9 @@ html[data-theme="sakura"]{
   --glass-bg:rgba(255,251,253,.34);
   --glass-bg-focus:rgba(255,252,254,.50);
   --glass-blur:blur(16px) brightness(1.42) saturate(1.05);
+  --glass-line:rgba(90,30,55,.22);
+  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.85),0 12px 26px -16px rgba(90,30,55,.35);
+  --glass-muted:#5a3f4a;
   --switch-knob:#fff;
   --switch-knob-shadow:0 1px 2px rgba(70,18,38,.3);
   --play-bg:linear-gradient(135deg,#dc5b9f,#a9275c);
@@ -3229,8 +3238,8 @@ img.emoji{
    переменные задают только лёгкую тонировку поверх неё. */
 html{--glass-bg:rgba(12,18,15,.46);--glass-bg-focus:rgba(10,15,13,.58)}
 html[data-theme="black"]{--glass-bg:rgba(0,0,0,.50);--glass-bg-focus:rgba(0,0,0,.62)}
-html[data-theme="light"]{--glass-bg:rgba(255,255,255,.44);--glass-bg-focus:rgba(255,255,255,.56)}
-html[data-theme="sakura"]{--glass-bg:rgba(255,251,253,.45);--glass-bg-focus:rgba(255,252,254,.57)}
+html[data-theme="light"]{--glass-bg:rgba(255,255,255,.60);--glass-bg-focus:rgba(255,255,255,.76)}
+html[data-theme="sakura"]{--glass-bg:rgba(255,251,253,.60);--glass-bg-focus:rgba(255,252,254,.76)}
 html[data-theme="copper"]{--glass-bg:rgba(19,13,8,.46);--glass-bg-focus:rgba(15,10,6,.58)}
 html[data-theme="neon"]{--glass-bg:rgba(13,10,21,.46);--glass-bg-focus:rgba(10,7,17,.58)}
 html[data-theme="ocean"]{--glass-bg:rgba(4,11,18,.46);--glass-bg-focus:rgba(3,8,13,.58)}
