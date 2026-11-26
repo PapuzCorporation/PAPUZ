@@ -4070,11 +4070,14 @@ function paintPeerSheet(peer) {
   });
 }
 
-/* тап по @нику — когда человек зарегистрировался */
-$('#p-nick').addEventListener('click', () => {
+/* тап по имени, аватарке или @юзернейму — когда человек зарегистрировался */
+function peerSinceToast() {
   const since = $('#p-nick').dataset.since;
   toast(since ? `на PAPUZ с ${since}` : 'дата регистрации недоступна', 3500);
-});
+}
+$('#p-nick').addEventListener('click', peerSinceToast);
+$('#p-name').addEventListener('click', peerSinceToast);
+$('#p-avatar').addEventListener('click', peerSinceToast);
 
 /* из профиля — сразу в личный чат */
 $('#p-chat').addEventListener('click', () => {
