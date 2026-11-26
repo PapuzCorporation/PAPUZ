@@ -5227,9 +5227,9 @@ if (window.visualViewport) {
 
   function build() {
     timer = 0;
-    /* полоса стекла нужна и в новом чате, где пока только системные
-       сообщения: иначе под композером нет размытия и виден резкий фон */
-    const show = !body.hidden && !composer.hidden && list.children.length > 0;
+    /* полоса стекла нужна и в пустом чате: размываются хотя бы обои,
+       иначе под композером резкий фон и кнопки «плывут» по рисунку */
+    const show = !body.hidden && !composer.hidden;
     strip.hidden = !show;
     if (!show) {
       if (strip.style.height) strip.style.height = '';
