@@ -5227,7 +5227,9 @@ if (window.visualViewport) {
 
   function build() {
     timer = 0;
-    const show = !body.hidden && !composer.hidden && !!list.querySelector('.msg');
+    /* полоса стекла нужна и в новом чате, где пока только системные
+       сообщения: иначе под композером нет размытия и виден резкий фон */
+    const show = !body.hidden && !composer.hidden && list.children.length > 0;
     strip.hidden = !show;
     if (!show) {
       if (strip.style.height) strip.style.height = '';
