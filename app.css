@@ -538,7 +538,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   border-bottom:1px solid var(--line);
   background:var(--head-grad)}
 .back{display:none}
-.chat-head-meta{flex:1;min-width:0}
+.chat-head-meta{flex:1;min-width:0;cursor:pointer}
 .lock{display:grid;place-items:center;color:var(--mint);opacity:.6;padding:0 4px}
 .lock.off{color:var(--muted-2);opacity:.4}
 .chat-head-name{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

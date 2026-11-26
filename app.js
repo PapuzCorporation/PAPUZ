@@ -4023,12 +4023,17 @@ $('#g-leave').addEventListener('click', async () => {
   }
 });
 
-$('#btn-peer').addEventListener('click', () => {
+function openActivePeer() {
   const chat = state.chats.find((c) => c.id === state.activeId);
   if (!chat) return;
   if (chat.type === 'dm') return openPeerSheet(chat);
   openGroupSheet(chat.id);
-});
+}
+$('#btn-peer').addEventListener('click', openActivePeer);
+/* по нику и аватарке в шапке чата — тот же профиль */
+const headMeta = document.querySelector('.chat-head-meta');
+if (headMeta) headMeta.addEventListener('click', openActivePeer);
+$('#peer-avatar').addEventListener('click', openActivePeer);
 
 /* профиль собеседника в личном чате */
 const peerSheet = $('#sheet-peer');
