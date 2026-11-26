@@ -735,8 +735,8 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 /* ------------------------------------------------ режимы стекла
    clone — размытая копия ленты (Chrome, WebView, Edge, Яндекс);
    safari — нативный многослойный -webkit-backdrop-filter без SVG;
-   full — backdrop-filter с SVG-преломлением (Firefox).
-   В safari/full копия не нужна и не строится, поэтому лента не режется. */
+   full — Crystal Rim: нативный blur + SVG-преломление на ободке (Firefox).
+   В safari/full копия ленты не строится, поэтому лента не режется. */
 .glass-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
 html[data-glass="safari"] .glass-strip,
 html[data-glass="full"] .glass-strip{display:none!important}
@@ -744,7 +744,8 @@ html[data-glass="full"] .glass-strip{display:none!important}
 /* Пилюли: фон и фильтры живут на пустых слоях ::before/::after, а текст,
    плейсхолдер «Сообщение…» и иконки подняты выше (z-index:2) и не имеют
    ни filter, ни backdrop-filter. Иначе Gecko прогоняет содержимое через
-   url(#glass-warp) и мнёт буквы прямо в поле ввода. */
+   SVG-фильтр и мнёт буквы прямо в поле ввода. В full он живёт только
+   на ободке ::after, а не на backdrop-filter. */
 html[data-glass="safari"] .c-btn,
 html[data-glass="safari"] .c-field,
 html[data-glass="full"] .c-btn,
@@ -786,20 +787,33 @@ html[data-glass="safari"] .c-field::before{
   -webkit-backdrop-filter:blur(18px) saturate(1.45) brightness(1.04);
   backdrop-filter:blur(18px) saturate(1.45) brightness(1.04)
 }
+/* full: нативный блюр без url() внутри backdrop-filter — Gecko не
+   сбрасывает его и не режет ленту. Хроматический кант — inset-тени. */
 html[data-glass="full"] .c-btn::before,
 html[data-glass="full"] .c-field::before{
-  backdrop-filter:blur(16px) saturate(1.25)
+  -webkit-backdrop-filter:blur(18px) saturate(1.85) brightness(1.06);
+  backdrop-filter:blur(18px) saturate(1.85) brightness(1.06);
+  box-shadow:
+    inset 0 1.5px 1px rgba(255,255,255,.42),
+    inset 1px 0 2px rgba(110,210,255,.24),
+    inset -1px 0 2px rgba(255,150,220,.18),
+    inset 0 -1.5px 2px rgba(255,255,255,.14),
+    0 8px 24px rgba(0,0,0,.42)
 }
-/* Преломление — отдельный слой и только по краю линзы: радиальная маска
-   оставляет центр ровным, а искажение живёт у контура пилюли. */
+/* Хрустальный ободок: маска оставляет только кольцо 7px, поэтому
+   текст и плейсхолдер в центре не попадают под SVG-фильтр. */
 html[data-glass="full"] .c-btn::after,
 html[data-glass="full"] .c-field::after{
   content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;
-  backdrop-filter:blur(20px) saturate(1.3) url(#glass-warp);
-  -webkit-mask-image:radial-gradient(115% 115% at 50% 50%,transparent 62%,#000 100%);
-  mask-image:radial-gradient(115% 115% at 50% 50%,transparent 62%,#000 100%);
-  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
-  -webkit-mask-size:100% 100%;mask-size:100% 100%
+  padding:7px;
+  background:conic-gradient(from var(--rim-angle,210deg),
+    rgba(120,210,255,.42), rgba(255,255,255,.62) 18%, rgba(255,160,220,.34) 38%,
+    rgba(255,255,255,.16) 56%, rgba(120,210,255,.40) 78%, rgba(255,255,255,.58));
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  filter:url(#lens-rim)
 }
 /* меню скрепки — плотное, без фильтров: подписи не должны плыть */
 html[data-glass="safari"] .attach-menu,

@@ -5372,3 +5372,23 @@ if (window.visualViewport) {
 
   schedule(200);
 })();
+
+/* ------------------------------------------------ блик на кромке (full)
+   В Firefox ободок стекла поворачивается вслед за прокруткой ленты:
+   меняем только CSS-переменную, без пересборки DOM и без фильтра на тексте. */
+(() => {
+  const root = document.documentElement;
+  const list = $('#messages');
+  const composer = $('#composer');
+  if (!list || !composer) return;
+  let ticking = false;
+  list.addEventListener('scroll', () => {
+    if (root.dataset.glass !== 'full' || ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      const deg = (list.scrollTop * 0.22) % 360;
+      composer.style.setProperty('--rim-angle', `${deg.toFixed(1)}deg`);
+    });
+  }, { passive: true });
+})();
