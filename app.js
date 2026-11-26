@@ -4070,14 +4070,54 @@ function paintPeerSheet(peer) {
   });
 }
 
-/* тап по имени, аватарке или @юзернейму — когда человек зарегистрировался */
+/* тап по имени — когда человек зарегистрировался */
 function peerSinceToast() {
   const since = $('#p-nick').dataset.since;
   toast(since ? `на PAPUZ с ${since}` : 'дата регистрации недоступна', 3500);
 }
-$('#p-nick').addEventListener('click', peerSinceToast);
 $('#p-name').addEventListener('click', peerSinceToast);
-$('#p-avatar').addEventListener('click', peerSinceToast);
+
+/* тап по @юзернейму — тихо копируем, без подсказок */
+$('#p-nick').addEventListener('click', () => {
+  const nick = $('#p-nick').textContent.trim();
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(nick).catch(() => fallbackCopy(nick));
+    return;
+  }
+  fallbackCopy(nick);
+});
+function fallbackCopy(text) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:-100px;left:-100px;opacity:0';
+    document.body.append(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  } catch { /* беззвучно */ }
+}
+
+/* тап по аватарке — полноэкранный просмотр */
+$('#p-avatar').addEventListener('click', () => {
+  const img = $('#p-avatar img');
+  if (!img) return;
+  openAvatarLightbox(img.src);
+});
+
+function openAvatarLightbox(url) {
+  const box = $('#lightbox');
+  const img = $('#lb-img');
+  const video = $('#lb-video');
+  video.hidden = true;
+  video.pause?.();
+  video.removeAttribute('src');
+  img.src = url;
+  img.hidden = false;
+  box.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
 
 /* из профиля — сразу в личный чат */
 $('#p-chat').addEventListener('click', () => {

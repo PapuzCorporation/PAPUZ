@@ -841,7 +841,7 @@ html[data-glass="full"] .announce-card{
 .profile{padding:0 24px 34px;margin-top:-52px;position:relative}
 .av-wrap{position:relative;width:104px}
 .profile #p-avatar{cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .15s}
-.profile #p-avatar:active{opacity:.7}
+.profile #p-avatar:active{opacity:.85}
 .av-edit{position:absolute;right:-2px;bottom:2px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
   background:var(--av-edit-bg);border:1px solid var(--line-strong);color:var(--muted);cursor:pointer;transition:.2s}
 .av-edit:hover{color:var(--send-ink);background:var(--accent-grad-2)}
