@@ -691,7 +691,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;-webkit-appearance:none;appearance:none}
 .c-field textarea::-webkit-resizer{display:none;width:0;height:0;background:none}
 .c-field textarea::-webkit-scrollbar{width:0;height:0;display:none}
-.c-field textarea::placeholder{color:var(--glass-muted,var(--muted-2))}
+.c-field textarea::placeholder{color:var(--glass-muted,var(--muted))}
 .send{
   position:relative;width:42px;height:42px;flex:none;border-radius:50%;
   display:grid;place-items:center;color:var(--send-fg);
@@ -755,6 +755,10 @@ html[data-glass="full"] .c-field{
   border-color:var(--glass-line,var(--line-strong));
   box-shadow:none
 }
+/* в full рамку рисует только хрустальное кольцо: без второй линии
+   кромка остаётся тонкой и не превращается в металлический обод */
+html[data-glass="full"] .c-btn,
+html[data-glass="full"] .c-field{border-color:transparent}
 html[data-glass="safari"] .c-btn > *,
 html[data-glass="safari"] .c-field > *,
 html[data-glass="full"] .c-btn > *,
@@ -794,26 +798,47 @@ html[data-glass="full"] .c-field::before{
   -webkit-backdrop-filter:blur(18px) saturate(1.85) brightness(1.06);
   backdrop-filter:blur(18px) saturate(1.85) brightness(1.06);
   box-shadow:
-    inset 0 1.5px 1px rgba(255,255,255,.42),
-    inset 1px 0 2px rgba(110,210,255,.24),
-    inset -1px 0 2px rgba(255,150,220,.18),
-    inset 0 -1.5px 2px rgba(255,255,255,.14),
+    inset 0 0 0 1px rgba(255,255,255,.10),
+    inset 0 1px 6px rgba(255,255,255,.07),
     0 8px 24px rgba(0,0,0,.42)
 }
-/* Хрустальный ободок: маска оставляет только кольцо 7px, поэтому
-   текст и плейсхолдер в центре не попадают под SVG-фильтр. */
+/* Хрустальный ободок: тонкое кольцо 1px, а не широкая лента —
+   так кромка читается как край стекла, а не как металл. Маска держит
+   фильтр только на контуре, центр с текстом остаётся ровным. */
 html[data-glass="full"] .c-btn::after,
 html[data-glass="full"] .c-field::after{
   content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;
-  padding:7px;
+  padding:1px;
   background:conic-gradient(from var(--rim-angle,210deg),
-    rgba(120,210,255,.42), rgba(255,255,255,.62) 18%, rgba(255,160,220,.34) 38%,
-    rgba(255,255,255,.16) 56%, rgba(120,210,255,.40) 78%, rgba(255,255,255,.58));
+    rgba(255,255,255,.40), rgba(140,225,255,.31) 8%, rgba(255,255,255,.07) 24%,
+    rgba(255,170,225,.22) 42%, rgba(255,255,255,.05) 58%,
+    rgba(120,210,255,.29) 76%, rgba(255,255,255,.30) 92%, rgba(255,255,255,.40));
   -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
   mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
   -webkit-mask-composite:xor;
   mask-composite:exclude;
   filter:url(#lens-rim)
+}
+
+/* На светлых темах белое кольцо растворяется в светлом стекле:
+   рисуем тонкий тёмный кант и приглушённый радужный блик. */
+html[data-glass="full"][data-theme="light"] .c-btn,
+html[data-glass="full"][data-theme="light"] .c-field{border-color:rgba(20,60,40,.15)}
+html[data-glass="full"][data-theme="sakura"] .c-btn,
+html[data-glass="full"][data-theme="sakura"] .c-field{border-color:rgba(120,60,90,.15)}
+html[data-glass="full"][data-theme="light"] .c-btn::after,
+html[data-glass="full"][data-theme="light"] .c-field::after{
+  background:conic-gradient(from var(--rim-angle,210deg),
+    rgba(24,70,48,.30), rgba(30,120,110,.22) 8%, rgba(24,70,48,.07) 24%,
+    rgba(150,80,110,.14) 42%, rgba(24,70,48,.05) 58%,
+    rgba(40,110,160,.16) 76%, rgba(24,70,48,.22) 92%, rgba(24,70,48,.30))
+}
+html[data-glass="full"][data-theme="sakura"] .c-btn::after,
+html[data-glass="full"][data-theme="sakura"] .c-field::after{
+  background:conic-gradient(from var(--rim-angle,210deg),
+    rgba(110,50,80,.30), rgba(200,110,150,.20) 8%, rgba(110,50,80,.07) 24%,
+    rgba(150,90,160,.12) 42%, rgba(110,50,80,.04) 58%,
+    rgba(80,110,170,.12) 76%, rgba(110,50,80,.22) 92%, rgba(110,50,80,.30))
 }
 /* меню скрепки — плотное, без фильтров: подписи не должны плыть */
 html[data-glass="safari"] .attach-menu,

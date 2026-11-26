@@ -34,7 +34,7 @@
 <meta name="twitter:title" content="PAPUZ">
 <meta name="twitter:description" content="Тихий мессенджер для своих">
 <meta name="twitter:image" content="https://papuz.ru/og-image.png">
-<link rel="stylesheet" href="/app.css?v=156">
+<link rel="stylesheet" href="/app.css?v=157">
 <link rel="modulepreload" href="/crypto.js?v=134">
 <link rel="modulepreload" href="/media.js?v=134">
 <script type="application/ld+json">
@@ -82,9 +82,9 @@
 <svg class="glass-defs" width="0" height="0" aria-hidden="true" focusable="false">
   <!-- преломление только по кромке стекла: шум гнёт сам ободок, центр не трогаем -->
   <filter id="lens-rim" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="1" seed="7" result="noise"/>
-    <feGaussianBlur in="noise" stdDeviation=".6" result="soft"/>
-    <feDisplacementMap in="SourceGraphic" in2="soft" scale="12" xChannelSelector="R" yChannelSelector="G"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.06" numOctaves="1" seed="7" result="noise"/>
+    <feGaussianBlur in="noise" stdDeviation=".25" result="soft"/>
+    <feDisplacementMap in="SourceGraphic" in2="soft" scale="1.5" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
 </svg>
 
@@ -867,6 +867,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/twemoji.min.js"></script>
-<script src="/app.js?v=156" type="module"></script>
+<script src="/app.js?v=157" type="module"></script>
 </body>
 </html>
