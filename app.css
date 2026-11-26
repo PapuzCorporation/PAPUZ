@@ -853,6 +853,8 @@ html[data-glass="full"] .announce-card{
 .pf-row{display:flex;align-items:center;gap:10px;margin:12px 0 18px}
 .pf-row .status-pill{min-width:0}
 #p-status{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-since{margin:-8px 0 16px;color:var(--muted-2);font-size:12px;letter-spacing:.01em}
+.pf-since[hidden]{display:none}
 .pf-chat-btn{width:auto;margin-left:auto;padding:8px 16px;border-radius:20px;font-size:12.5px;flex:none}
 .status-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:20px;
   background:var(--pill-bg);border:1px solid var(--pill-line);font-size:12px;color:var(--pill-ink)}

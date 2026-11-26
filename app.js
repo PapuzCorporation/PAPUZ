@@ -75,6 +75,12 @@ function dayLabel(ts) {
   if (same(d, y)) return 'Вчера';
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
 }
+const MONTHS_RU = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+function regDate(ts) {
+  const d = new Date(Number(ts));
+  if (!Number.isFinite(d.getTime()) || d.getTime() <= 0) return '';
+  return `${d.getDate()} ${MONTHS_RU[d.getMonth()]} ${d.getFullYear()}`;
+}
 function relTime(ts) {
   const diff = Date.now() - ts;
   if (diff < 60e3) return 'только что';
@@ -4052,6 +4058,10 @@ function paintPeerSheet(peer) {
   $('#p-bio').textContent = bio || 'Без описания';
   $('#p-bio').classList.toggle('is-empty', !bio);
   setPeerSheetStatus(peer);
+  const since = regDate(peer.createdAt);
+  const sinceEl = $('#p-since');
+  sinceEl.textContent = since ? `на PAPUZ с ${since}` : '';
+  sinceEl.hidden = !since;
   /* «Написать» есть всегда, кроме профиля, открытого из чата
      с этим человеком: там поле ввода и так под рукой */
   $('#p-chat').hidden = !!state.peerSheetId;
