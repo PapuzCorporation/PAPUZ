@@ -842,6 +842,50 @@ html[data-glass="full"][data-theme="sakura"] .c-field::after{
     rgba(150,90,160,.12) 42%, rgba(110,50,80,.04) 58%,
     rgba(80,110,170,.12) 76%, rgba(110,50,80,.22) 92%, rgba(110,50,80,.30))
 }
+
+/* Кнопка отправки/записи: то же стекло, но с акцентом темы.
+   Заливка остаётся в send-цветах, а кольцо и блик берут цвет темы,
+   поэтому кнопка выделяется на фоне нейтрального стекла композера. */
+html[data-glass="full"] .send{
+  background:none;
+  border-color:transparent;
+  box-shadow:none
+}
+html[data-glass="full"] .send > *{
+  position:relative;z-index:2;
+  filter:none;-webkit-filter:none
+}
+html[data-glass="full"] .send::before{
+  content:"";position:absolute;inset:0;z-index:0;border-radius:inherit;pointer-events:none;
+  background:var(--send-grad),var(--glass-bg,var(--card-bg));
+  -webkit-backdrop-filter:blur(18px) saturate(1.85) brightness(1.06);
+  backdrop-filter:blur(18px) saturate(1.85) brightness(1.06);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.10),
+    inset 0 1px 6px rgba(255,255,255,.07),
+    inset 2px 0 7px rgba(110,210,255,.12),
+    inset -2px 0 7px rgba(255,150,220,.10),
+    0 8px 24px rgba(0,0,0,.42)
+}
+html[data-glass="full"] .send::after{
+  content:"";position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;
+  padding:1px;
+  /* запасной ровный кант, если color-mix не поддержан */
+  background:conic-gradient(from var(--rim-angle,210deg),
+    var(--send-line-press), var(--send-line) 12%, var(--send-line) 30%,
+    var(--send-line) 48%, var(--send-line) 64%, var(--send-line-press) 82%,
+    var(--send-line) 94%, var(--send-line-press));
+  background:conic-gradient(from var(--rim-angle,210deg),
+    color-mix(in srgb,var(--send-fg) 50%,rgba(255,255,255,.7)),
+    var(--send-line-press) 12%, var(--send-line) 28%, var(--send-line) 44%,
+    var(--send-line) 60%, var(--send-line-press) 76%, var(--send-line) 90%,
+    color-mix(in srgb,var(--send-fg) 50%,rgba(255,255,255,.7)));
+  -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  filter:url(#lens-rim)
+}
 /* меню скрепки — плотное, без фильтров: подписи не должны плыть */
 html[data-glass="safari"] .attach-menu,
 html[data-glass="full"] .attach-menu{
