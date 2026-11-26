@@ -3240,6 +3240,10 @@ html{--glass-bg:rgba(12,18,15,.46);--glass-bg-focus:rgba(10,15,13,.58)}
 html[data-theme="black"]{--glass-bg:rgba(0,0,0,.50);--glass-bg-focus:rgba(0,0,0,.62)}
 html[data-theme="light"]{--glass-bg:rgba(255,255,255,.60);--glass-bg-focus:rgba(255,255,255,.76)}
 html[data-theme="sakura"]{--glass-bg:rgba(255,251,253,.60);--glass-bg-focus:rgba(255,252,254,.76)}
+/* на тёмных обоях белое стекло темнеет: поднимаем плотность,
+   иначе пилюля становится серой и текст теряется */
+html[data-theme="light"][data-wall-tone="dark"]{--glass-bg:rgba(255,255,255,.72);--glass-bg-focus:rgba(255,255,255,.84)}
+html[data-theme="sakura"][data-wall-tone="dark"]{--glass-bg:rgba(255,251,253,.72);--glass-bg-focus:rgba(255,252,254,.84)}
 html[data-theme="copper"]{--glass-bg:rgba(19,13,8,.46);--glass-bg-focus:rgba(15,10,6,.58)}
 html[data-theme="neon"]{--glass-bg:rgba(13,10,21,.46);--glass-bg-focus:rgba(10,7,17,.58)}
 html[data-theme="ocean"]{--glass-bg:rgba(4,11,18,.46);--glass-bg-focus:rgba(3,8,13,.58)}
