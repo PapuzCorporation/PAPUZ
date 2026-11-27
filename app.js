@@ -4996,20 +4996,10 @@ function syncViewportBox() {
   /* при сильном зуме не сжимаем интерфейс — даём браузеру приблизить страницу */
   if (vv && vv.scale > 1.01) return;
   const root = document.documentElement;
-  /* Firefox: 100dvh сам учитывает плавающую адресную строку, поэтому
-     не подменяем высоту на каждом движении visualViewport. Исключение —
-     открытая клавиатура: там нужна реальная видимая высота. */
-  if (root.dataset.glass === 'full') {
-    const keyboard = vv && vv.height < window.innerHeight - 150;
-    if (!keyboard) {
-      if (root.dataset.viewport !== 'dvh') {
-        root.dataset.viewport = 'dvh';
-        root.style.removeProperty('--app-top');
-        root.style.removeProperty('--app-h');
-      }
-      return;
-    }
-  }
+  /* Firefox на Android меняет высоту видимой области при скролле
+     (прячется/показывается адресная строка), а 100dvh в некоторых
+     сборках оставляет под ней зазор. Поэтому и в full-режиме держим
+     каркас по visualViewport, а не по layout viewport. */
   const top = vv ? Math.round(vv.offsetTop) : 0;
   const height = vv ? Math.round(vv.height) : window.innerHeight;
   const stamp = `${top}:${height}`;

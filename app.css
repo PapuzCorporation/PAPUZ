@@ -269,7 +269,7 @@ body{
   margin:0;background:var(--bg);color:var(--ink);
   font:400 15px/1.45 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
-  height:100dvh;overflow:hidden;
+  height:100dvh;height:-moz-available;overflow:hidden;
 }
 button,input,textarea{font:inherit;color:inherit}
 button{background:none;border:0;cursor:pointer}
@@ -381,7 +381,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .btn.danger-ghost:hover{background:var(--danger-soft)}
 
 /* ------------------------------------------------------------- каркас */
-.app{position:relative;z-index:1;height:100%;height:100dvh;height:var(--app-h,100dvh);padding:clamp(0px,1.2vw,16px)}
+.app{position:relative;z-index:1;height:100%;height:100dvh;height:-moz-available;height:var(--app-h,100dvh);padding:clamp(0px,1.2vw,16px)}
 .shell{
   height:100%;display:grid;grid-template-columns:376px 1fr;gap:12px;
   min-width:0;border-radius:26px;overflow:hidden;
@@ -672,8 +672,11 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
    сообщения пропадают полосами и обрезаются. Прозрачный фон, блик и
    тонкая рамка дают тот же вид, но не трогают композитор прокрутки. */
 .composer,.typing,.ch-sub{position:relative;z-index:1}
-.composer{display:flex;align-items:flex-end;gap:7px;
-  padding:8px max(12px, calc((100% - 880px) / 2)) calc(8px + env(safe-area-inset-bottom))}
+.composer{display:flex;align-items:flex-end;gap:7px;box-sizing:border-box;
+  width:100%;max-width:100%;margin:0;
+  padding:8px max(12px, calc((100% - 880px) / 2)) max(8px, env(safe-area-inset-bottom))}
+.composer > *{box-sizing:border-box;min-width:0}
+.composer .c-field textarea{min-width:0}
 .c-btn{width:42px;height:42px;flex:none;border-radius:50%;display:grid;place-items:center;
   color:var(--c-btn-ink);background:var(--glass-bg,var(--card-bg));border:1px solid var(--glass-line,var(--c-btn-line));
   box-shadow:var(--glass-shadow);
@@ -904,7 +907,7 @@ html[data-glass="full"] .announce-card{
 .ch-sub-btn{width:auto;flex:none;padding:9px 18px;border-radius:22px;font-size:13px;box-shadow:none}
 
 /* ------------------------------------------------------------ профиль */
-.sheet{position:fixed;top:var(--app-top,0);left:0;right:0;height:100%;height:100dvh;height:var(--app-h,100dvh);
+.sheet{position:fixed;top:var(--app-top,0);left:0;right:0;height:100%;height:100dvh;height:-moz-available;height:var(--app-h,100dvh);
   z-index:60;display:flex;justify-content:flex-end}
 .sheet-backdrop{position:absolute;inset:0;background:var(--backdrop);
   animation:fadeIn .28s ease both}
@@ -1774,7 +1777,7 @@ body.rec-voice .composer{opacity:0;pointer-events:none}
   .app{padding:0;margin-top:var(--app-top,0)}
   .shell{grid-template-columns:minmax(0,1fr);border-radius:0;gap:0;border:0;width:100%;max-width:100%}
   .side{border-right:0;width:100%;max-width:100%;overflow-x:clip}
-  .chat{position:fixed;top:var(--app-top,0);left:0;right:0;height:100%;height:100dvh;height:var(--app-h,100dvh);
+  .chat{position:fixed;top:var(--app-top,0);left:0;right:0;height:100%;height:100dvh;height:-moz-available;height:var(--app-h,100dvh);
     z-index:30;background:var(--chat-mobile-bg);content-visibility:auto;contain-intrinsic-size:auto 100dvh;
     transform:translateX(100%);transition:transform .34s var(--ease)}
   .shell.chat-open .chat{transform:none;content-visibility:visible}
@@ -1799,6 +1802,17 @@ html .typing{position:absolute;left:0;right:0;bottom:var(--composer-h,68px);z-in
 html .ch-sub{position:absolute;left:0;right:0;bottom:0;z-index:2}
 html .attach-menu{bottom:calc(var(--composer-h,68px) + 12px)}
 html .uploads{bottom:calc(var(--composer-h,68px) + 10px)}
+
+/* Gecko рисует классический скроллбар и отнимает 8–12 px ширины у
+   контента: пилюля и карточки съезжают вбок. На телефоне полосы не
+   нужны — прячем их во всех прокручиваемых блоках. */
+.messages,.chat-list,.users-list,.results,.set-scroll,.sheet-panel,.auth,
+.announce-text,.gc-results{scrollbar-width:none;-ms-overflow-style:none}
+.messages::-webkit-scrollbar,.chat-list::-webkit-scrollbar,
+.users-list::-webkit-scrollbar,.results::-webkit-scrollbar,
+.set-scroll::-webkit-scrollbar,.sheet-panel::-webkit-scrollbar,
+.auth::-webkit-scrollbar,.announce-text::-webkit-scrollbar,
+.gc-results::-webkit-scrollbar{width:0;height:0;display:none}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;
     transition-property:none!important}
