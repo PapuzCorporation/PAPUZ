@@ -926,6 +926,11 @@ html[data-glass="full"] .announce-card{
 .sheet-close{position:absolute;top:12px;right:14px;width:34px;height:34px;border-radius:12px;
   color:var(--muted);background:var(--close-bg);border:1px solid var(--line);display:grid;place-items:center;z-index:10}
 .sheet-close:hover{color:var(--ink);background:var(--close-bg-hover)}
+/* внешняя ссылка /ник: тот же sheet, но как самостоятельная страница */
+html[data-route] .sheet-backdrop{display:none}
+html[data-route] .sheet{justify-content:center;background:var(--bg-grad)}
+html[data-route] .sheet-panel{width:min(460px,100%);border-left:0;box-shadow:none;animation:fadeIn .3s ease both}
+html[data-route][data-route-guest="1"] .sheet-close{display:none}
 .profile{padding:0 24px 34px;margin-top:-52px;position:relative}
 .av-wrap{position:relative;width:104px}
 .av-edit{position:absolute;right:-2px;bottom:2px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
@@ -1480,6 +1485,7 @@ html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
 
 .msg .txt{white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
 .msg .mention{font-weight:700;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px;cursor:pointer}
+.msg a.mention{color:inherit}
 .msg .mention:active{opacity:.6}
 .msg.has-media{padding:5px;max-width:min(88%,560px)}
 .msg.has-media .meta{padding:0 5px 1px}

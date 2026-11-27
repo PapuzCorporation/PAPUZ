@@ -21,6 +21,7 @@ const state = {
   presenceSnapshot: new Map(), // userId -> последний известный статус
   peerSheetId: null,
   peerSheetUser: null,    // профиль участника, открытый из списка группы
+  route: null,            // внешняя ссылка /ник: профиль или канал
   messages: new Map(),
   notify: null,           // привязка Telegram и общие настройки уведомлений
   notifyCode: null,       // выданный одноразовый код, пока бот не привязан
@@ -656,6 +657,7 @@ function hideBoot() {
 
 function showAuth() {
   hideBoot();
+  if (state.route) closeRouteSheets();
   document.documentElement.dataset.screen = 'auth';
   $('#app').hidden = true;
   $('#auth').hidden = false;
@@ -677,6 +679,237 @@ function showApp() {
   initReadQueue();
   loadChats().catch(() => {});
   connectWs();
+}
+
+/* ------------------------------------------------------ внешние ссылки /ник
+   /sinok открывает тот же профиль, что и @sinok, но снаружи — как страницу.
+   Внутри сайта такие ссылки перехватываются и работают как упоминание. */
+
+const ROUTE_RESERVED = new Set([
+  'api', 'app', 'assets', 'uploads', 'media', 'login', 'register', 'settings',
+  'theme-init', 'sw', 'manifest', 'favicon', 'robots', 'sitemap', 'announce',
+  'maint', 'stage', 'snow', 'og-image', 'icon', 'apple-touch-icon', 'crypto',
+  'twemoji', 'emoji', 'fonts', 'index', 'client',
+]);
+
+function routeNick() {
+  let path = location.pathname;
+  try { path = decodeURIComponent(path); } catch { /* оставляем как есть */ }
+  const m = path.match(/^\/([a-z0-9_]{3,20})\/?$/i);
+  if (!m) return null;
+  const name = m[1].toLowerCase();
+  return ROUTE_RESERVED.has(name) ? null : name;
+}
+
+async function publicRouteInfo(nick) {
+  const res = await fetch(`/api/public/resolve?u=${encodeURIComponent(nick)}`, {
+    credentials: 'same-origin',
+    cache: 'no-store',
+    headers: { accept: 'application/json' },
+  });
+  if (res.status === 404) return null;
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.error || 'Ошибка сети');
+  return data;
+}
+
+function closeRouteSheets() {
+  state.route = null;
+  delete document.documentElement.dataset.route;
+  delete document.documentElement.dataset.routeGuest;
+  sheetOpen(peerSheet, false);
+  sheetOpen(groupSheet, false);
+  groupChatId = null;
+}
+
+function clearRoute() {
+  if (!state.route) return;
+  closeRouteSheets();
+  history.replaceState({}, '', '/');
+}
+
+function startRouteAuth() {
+  const nick = state.route?.nick || routeNick();
+  if (nick) sessionStorage.setItem('papuz:route', nick);
+  showAuth();
+}
+
+function resumeRouteAfterAuth() {
+  const stored = sessionStorage.getItem('papuz:route');
+  sessionStorage.removeItem('papuz:route');
+  const nick = routeNick() || stored;
+  if (!nick) return;
+  if (!routeNick()) history.replaceState({}, '', '/' + nick);
+  openRoute(nick);
+}
+
+function paintRoutePeer(route) {
+  const btn = $('#p-chat');
+  const self = !!route.viewer?.self;
+  btn.hidden = false;
+  btn.disabled = self;
+  btn.textContent = self ? 'Это ты' : 'Написать';
+}
+
+function paintRouteChannel(route) {
+  const c = route.chat;
+  groupChatId = c.id;
+  groupAvatar($('#g-avatar'), c, 'av-xl');
+  $('#g-name').textContent = c.title;
+  const since = regDate(c.createdAt);
+  if (since) $('#g-name').dataset.since = since;
+  else delete $('#g-name').dataset.since;
+  const subs = `${c.members} ${plural(c.members, 'подписчик', 'подписчика', 'подписчиков')}`;
+  const gSub = $('#g-sub');
+  gSub.textContent = '';
+  if (c.username) {
+    const nick = document.createElement('span');
+    nick.className = 'nick-copy';
+    nick.textContent = '@' + c.username;
+    gSub.append(nick, document.createTextNode(` · ${subs}`));
+  } else {
+    gSub.textContent = subs;
+  }
+  $('#g-about').textContent = c.about || '';
+  $('#g-about').hidden = !c.about;
+  $('#g-form').hidden = true;
+  $('#g-members-section').hidden = true;
+  $('#g-danger').hidden = true;
+  $('#g-confirm').hidden = true;
+  $('#g-avatar-edit').hidden = true;
+  $('#g-add-btn').hidden = true;
+  $('#g-add-wrap').hidden = true;
+
+  const joined = !!route.chat.joined;
+  const authed = !!route.viewer?.authed;
+  const isOwner = route.viewer?.role === 'owner';
+  const leave = $('#g-leave');
+  leave.hidden = false;
+  leave.disabled = false;
+  leave.classList.remove('primary');
+  leave.classList.remove('danger-ghost');
+  if (isOwner) {
+    leave.textContent = 'Открыть канал';
+    leave.classList.add('primary');
+  } else if (joined) {
+    leave.textContent = 'Покинуть канал';
+    leave.classList.add('danger-ghost');
+  } else {
+    leave.textContent = 'Подписаться';
+    leave.classList.add('primary');
+  }
+  const open = $('#g-open');
+  open.hidden = !(authed && joined && !isOwner);
+  sheetOpen(groupSheet, true);
+}
+
+async function openRoute(nick) {
+  const name = String(nick || '').replace(/^@+/, '').toLowerCase();
+  if (!/^[a-z0-9_]{3,20}$/.test(name)) return false;
+  let info;
+  try {
+    info = await publicRouteInfo(name);
+  } catch (err) {
+    toast(err.message);
+    return false;
+  }
+  if (!info) return false;
+
+  if (!$('#sheet').hidden) closeSheet();
+  if (!$('#sheet-new').hidden) closeNewSheet();
+  state.route = {
+    nick: name,
+    type: info.type,
+    user: info.user || null,
+    chat: info.chat || null,
+    viewer: info.viewer || { authed: !!state.me },
+  };
+  document.documentElement.dataset.route = info.type;
+  document.documentElement.dataset.routeGuest = state.route.viewer.authed ? '0' : '1';
+
+  if (!state.route.viewer.authed) {
+    hideBoot();
+    document.documentElement.dataset.screen = 'route';
+    $('#auth').hidden = true;
+    $('#app').hidden = true;
+  }
+
+  if (info.type === 'user') {
+    state.peerSheetId = null;
+    state.peerSheetUser = info.user;
+    paintPeerSheet(info.user);
+    paintRoutePeer(state.route);
+    sheetOpen(groupSheet, false);
+    sheetOpen(peerSheet, true);
+  } else {
+    paintRouteChannel(state.route);
+    sheetOpen(peerSheet, false);
+    sheetOpen(groupSheet, true);
+  }
+  return true;
+}
+
+async function openRouteChannelChat() {
+  const route = state.route;
+  if (!route || route.type !== 'channel') return;
+  if (!route.viewer?.authed) return startRouteAuth();
+  if (!route.chat.joined) return toast('Сначала подпишитесь на канал');
+  const id = route.chat.id;
+  const username = route.chat.username;
+  closeGroupSheet();
+  if (state.chats.some((c) => c.id === id)) return openChat(id);
+  if (username) return openChannelByUsername(username);
+}
+
+async function routeChannelAction() {
+  const route = state.route;
+  if (!route || route.type !== 'channel') return;
+  if (!route.viewer?.authed) return startRouteAuth();
+  if (route.viewer.role === 'owner') return openRouteChannelChat();
+  const btn = $('#g-leave');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const joined = !!route.chat.joined;
+  const oldLabel = btn.textContent;
+  btn.textContent = joined ? 'Выхожу…' : 'Подписываюсь…';
+  try {
+    if (joined) {
+      await api(`/api/chats/${route.chat.id}/leave`, { method: 'POST' });
+      const id = route.chat.id;
+      route.chat.joined = false;
+      route.chat.members = Math.max(0, Number(route.chat.members || 1) - 1);
+      route.viewer.joined = false;
+      route.viewer.role = null;
+      state.chats = state.chats.filter((c) => c.id !== id);
+      state.messages.delete(id);
+      scheduleRenderChats();
+      if (state.activeId === id) {
+        $('.shell').classList.remove('chat-open');
+        state.activeId = null;
+        $('#chat-body').hidden = true;
+        $('#chat-empty').hidden = false;
+      }
+      toast('Вы вышли из канала');
+    } else {
+      const { chat } = await api('/api/chats/join', {
+        method: 'POST',
+        body: JSON.stringify({ username: route.chat.username }),
+      });
+      route.chat.joined = true;
+      route.chat.members = Number(chat.members) || Number(route.chat.members || 0) + 1;
+      route.viewer.joined = true;
+      route.viewer.role = chat.role || 'member';
+      if (!state.chats.some((c) => c.id === chat.id)) state.chats.unshift(chat);
+      scheduleRenderChats();
+      toast('Вы подписались на канал');
+    }
+    paintRouteChannel(route);
+  } catch (err) {
+    toast(err.message);
+    btn.textContent = oldLabel;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 $$('.tab').forEach((tab) => tab.addEventListener('click', () => setAuthMode(tab.dataset.mode)));
@@ -758,6 +991,7 @@ $('#auth-form').addEventListener('submit', async (e) => {
       }
     }
     showApp();
+    resumeRouteAfterAuth();
   } catch (e2) {
     err.textContent = e2.message === 'unauthorized'
       ? 'Неверный ник или пароль'
@@ -856,24 +1090,36 @@ function isMine(m) {
 }
 
 /* @упоминания: ник человека или канала становится кликабельным */
-const MENTION_RE = /(^|[^\w@])@([a-z0-9_]{3,20})(?![a-z0-9_])/gi;
+/* @ник и ссылки papuz.ru/ник в тексте сообщения — один и тот же переход */
+const TEXT_REF_RE = /(^|[^\w@/])(?:@([a-z0-9_]{3,20})(?![a-z0-9_])|((?:(?:https?:\/\/)?(?:www\.|dev\.)?papuz\.ru)\/)([a-z0-9_]{3,20})(?![a-z0-9_]))/gi;
 
 function fillMentions(node, text) {
   node.textContent = '';
   if (!text) return;
   let last = 0;
-  MENTION_RE.lastIndex = 0;
+  TEXT_REF_RE.lastIndex = 0;
   let m;
-  while ((m = MENTION_RE.exec(text))) {
+  while ((m = TEXT_REF_RE.exec(text))) {
     const start = m.index + m[1].length;
     if (start > last) node.append(document.createTextNode(text.slice(last, start)));
-    const name = m[2].toLowerCase();
-    const ref = document.createElement('span');
-    ref.className = 'mention';
-    ref.dataset.username = name;
-    ref.textContent = '@' + m[2];
-    node.append(ref);
-    last = start + 1 + m[2].length;
+    if (m[2]) {
+      const name = m[2].toLowerCase();
+      const ref = document.createElement('span');
+      ref.className = 'mention';
+      ref.dataset.username = name;
+      ref.textContent = '@' + m[2];
+      node.append(ref);
+      last = start + 1 + m[2].length;
+    } else {
+      const name = m[4].toLowerCase();
+      const a = document.createElement('a');
+      a.className = 'mention nick-link';
+      a.href = '/' + name;
+      a.dataset.username = name;
+      a.textContent = m[3] + m[4];
+      node.append(a);
+      last = start + m[3].length + m[4].length;
+    }
   }
   if (last < text.length) node.append(document.createTextNode(text.slice(last)));
 }
@@ -3764,6 +4010,7 @@ $('#gc-create').addEventListener('click', async () => {
 let groupChatId = null;
 
 async function openGroupSheet(chatId) {
+  if (state.route) clearRoute();
   groupChatId = chatId;
   let chat;
   let members;
@@ -3780,6 +4027,12 @@ async function openGroupSheet(chatId) {
   $('#g-delete').hidden = false;
   $('#g-delete').textContent = chat.type === 'channel' ? 'Удалить канал' : 'Удалить группу';
   $('#g-leave').textContent = chat.type === 'channel' ? 'Покинуть канал' : 'Покинуть чат';
+  $('#g-leave').hidden = false;
+  $('#g-leave').disabled = false;
+  $('#g-leave').classList.remove('primary');
+  $('#g-leave').classList.add('danger-ghost');
+  $('#g-open').hidden = true;
+  $('#g-members-section').hidden = false;
   $('#g-confirm-text').textContent = `Удалить ${noun} навсегда? Все сообщения и файлы исчезнут у ${who}.`;
   groupAvatar($('#g-avatar'), chat, 'av-xl');
   const gName = $('#g-name');
@@ -3826,7 +4079,12 @@ async function openGroupSheet(chatId) {
   sheetOpen(groupSheet, true);
 }
 
-function closeGroupSheet() { sheetOpen(groupSheet, false); groupChatId = null; }
+function closeGroupSheet() {
+  const wasRoute = state.route?.type === 'channel';
+  sheetOpen(groupSheet, false);
+  groupChatId = null;
+  if (wasRoute) clearRoute();
+}
 $$('[data-close-group]').forEach((el) => el.addEventListener('click', closeGroupSheet));
 
 function renderMembers(chat, members) {
@@ -4015,6 +4273,7 @@ $('#g-delete-yes').addEventListener('click', async () => {
 });
 
 $('#g-leave').addEventListener('click', async () => {
+  if (state.route?.type === 'channel') return routeChannelAction();
   if (!groupChatId) return;
   try {
     await api(`/api/chats/${groupChatId}/leave`, { method: 'POST' });
@@ -4036,6 +4295,8 @@ $('#g-leave').addEventListener('click', async () => {
   }
 });
 
+$('#g-open').addEventListener('click', openRouteChannelChat);
+
 $('#btn-peer').addEventListener('click', () => {
   const chat = state.chats.find((c) => c.id === state.activeId);
   if (!chat) return;
@@ -4049,6 +4310,7 @@ const peerSheet = $('#sheet-peer');
 function openPeerSheet(chat) {
   const peer = chat.peer || state.peers.get(chat.id);
   if (!peer) return;
+  if (state.route) clearRoute();
   state.peerSheetId = chat.id;
   state.peerSheetUser = null;
   paintPeerSheet(peer);
@@ -4057,8 +4319,12 @@ function openPeerSheet(chat) {
 
 function openUserSheet(user) {
   if (!user || user.id === state.me?.id) return;
+  if (state.route) clearRoute();
   state.peerSheetId = null;
   state.peerSheetUser = user;
+  const btn = $('#p-chat');
+  btn.disabled = false;
+  btn.textContent = 'Написать';
   paintPeerSheet(user);
   sheetOpen(peerSheet, true);
 }
@@ -4117,6 +4383,7 @@ function fallbackCopy(text) {
 
 /* канал: имя — когда создан, @юзернейм — тихое копирование */
 $('#g-name').addEventListener('click', () => {
+  if (state.route?.type === 'channel') return openRouteChannelChat();
   const since = $('#g-name').dataset.since;
   if (!since) return;
   toast(`на PAPUZ с ${since}`, 3500);
@@ -4128,6 +4395,14 @@ $('#g-sub').addEventListener('click', (e) => {
 
 /* из профиля — сразу в личный чат */
 $('#p-chat').addEventListener('click', () => {
+  if (state.route?.type === 'user') {
+    const route = state.route;
+    if (!route.viewer?.authed) return startRouteAuth();
+    if (route.viewer?.self) return;
+    closePeerSheet();
+    startChat(route.user);
+    return;
+  }
   const user = state.peerSheetUser || state.peers.get(state.peerSheetId);
   if (!user) return;
   /* свой профиль в предпросмотре: кнопка есть, но по нажатию ничего не делаем */
@@ -4153,9 +4428,11 @@ $('#set-eye').addEventListener('click', () => {
 });
 
 function closePeerSheet() {
+  const wasRoute = state.route?.type === 'user';
   state.peerSheetId = null;
   state.peerSheetUser = null;
   sheetOpen(peerSheet, false);
+  if (wasRoute) clearRoute();
 }
 $$('[data-close-peer]').forEach((el) => el.addEventListener('click', closePeerSheet));
 
@@ -5029,7 +5306,11 @@ if (window.visualViewport) {
 (async function boot() {
   try {
     const data = await api('/api/me');
-    if (!data.user) return showAuth();
+    if (!data.user) {
+      const nick = routeNick();
+      if (nick && await openRoute(nick)) return;
+      return showAuth();
+    }
     state.me = data.user;
     state.stats = data.stats;
     state.priv = await loadPriv(data.user.id);
@@ -5043,7 +5324,11 @@ if (window.visualViewport) {
       return;
     }
     showApp();
+    const nick = routeNick();
+    if (nick) openRoute(nick);
   } catch {
+    const nick = routeNick();
+    if (nick && await openRoute(nick)) return;
     showAuth();
   }
 })();
