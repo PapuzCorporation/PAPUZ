@@ -237,8 +237,13 @@ const THEME_NAMES = {
 };
 const THEMES = Object.keys(THEME_COLORS);
 
-/* режим снега: включается поверх любой темы, состояние приходит с сервера */
+/* режим снега: включается поверх любой темы, состояние приходит с сервера.
+   Личный переключатель только скрывает снег на этом устройстве — он не
+   трогает snow.json и не выключает снег у других людей. */
 let SNOW_ENABLED = false;
+const SNOW_PREF_KEY = 'papuz-snow';
+let snowPref = true;
+try { snowPref = localStorage.getItem(SNOW_PREF_KEY) !== 'off'; } catch { /* приватный режим */ }
 
 let snowBuilt = false;
 function ensureSnow() {
@@ -266,8 +271,15 @@ function ensureSnow() {
 }
 
 function applySnow() {
-  document.documentElement.dataset.snow = SNOW_ENABLED ? 'on' : 'off';
-  if (SNOW_ENABLED) ensureSnow();
+  const on = SNOW_ENABLED && snowPref;
+  document.documentElement.dataset.snow = on ? 'on' : 'off';
+  if (on) ensureSnow();
+  const row = $('#snow-row');
+  if (row) {
+    row.setAttribute('aria-checked', String(snowPref));
+    row.classList.toggle('is-off', !snowPref);
+  }
+  setSwitch($('#snow-switch'), snowPref);
 }
 
 /* снег включают из бота: читаем настройку адреса, без кэша */
@@ -362,6 +374,17 @@ $$('[data-theme-set]').forEach((btn) => {
 /* тема поменялась в другой вкладке — подхватываем без перезагрузки */
 window.addEventListener('storage', (e) => {
   if (e.key === THEME_KEY && THEMES.includes(e.newValue)) applyTheme(e.newValue, false);
+  if (e.key === SNOW_PREF_KEY) {
+    snowPref = e.newValue !== 'off';
+    applySnow();
+  }
+});
+
+/* снег только для себя: значение живёт в localStorage, сервер не трогаем */
+$('#snow-row').addEventListener('click', () => {
+  snowPref = !snowPref;
+  try { localStorage.setItem(SNOW_PREF_KEY, snowPref ? 'on' : 'off'); } catch { /* приватный режим */ }
+  applySnow();
 });
 
 paintTheme(THEMES.includes(document.documentElement.dataset.theme)
@@ -4781,16 +4804,25 @@ window.addEventListener('focus', refreshNotificationsIfOpen);
 
 const chatMore = $('#chat-more');
 
+/* подтверждение очистки живёт внутри того же меню: список прячем,
+   показываем вопрос, при закрытии меню всегда возвращаем список */
+function resetChatClear() {
+  $('#chat-more-list').hidden = false;
+  $('#chat-clear-confirm').hidden = true;
+}
+
 function closeChatMore() {
   if (!chatMore || chatMore.hidden) return;
   chatMore.hidden = true;
   $('#btn-chat-more').setAttribute('aria-expanded', 'false');
+  resetChatClear();
 }
 
 function openChatMore() {
   const chat = state.chats.find((c) => c.id === state.activeId);
   if (!chat) return;
   syncChatNotify();
+  resetChatClear();
   chatMore.hidden = false;
   $('#btn-chat-more').setAttribute('aria-expanded', 'true');
 }
@@ -4858,6 +4890,37 @@ $('#chat-notify-toggle').addEventListener('click', async () => {
     chat.notify = !next;
     syncChatNotify();
     toast(err.message);
+  }
+});
+
+$('#chat-clear-row').addEventListener('click', () => {
+  $('#chat-more-list').hidden = true;
+  $('#chat-clear-confirm').hidden = false;
+});
+
+$('#chat-clear-no').addEventListener('click', () => {
+  $('#chat-clear-confirm').hidden = true;
+  $('#chat-more-list').hidden = false;
+});
+
+$('#chat-clear-yes').addEventListener('click', async () => {
+  const chat = state.chats.find((c) => c.id === state.activeId);
+  if (!chat) return;
+  const btn = $('#chat-clear-yes');
+  btn.disabled = true;
+  try {
+    await api(`/api/chats/${chat.id}/clear`, { method: 'POST' });
+    state.messages.set(chat.id, []);
+    chat.lastMessage = null;
+    chat.unread = 0;
+    closeChatMore();
+    if (state.activeId === chat.id) await renderMessages(chat.id);
+    scheduleRenderChats();
+    toast('История очищена');
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    btn.disabled = false;
   }
 });
 

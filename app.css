@@ -571,6 +571,11 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
 .chat-more-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .chat-more-title{font-size:13px;color:var(--ink);line-height:1.3}
 .chat-more-sub{font-size:10.5px;color:var(--muted-2);line-height:1.35}
+.chat-more-ico-danger{
+  color:var(--danger-ghost-ink);background:var(--danger-ghost-bg);
+  border-color:var(--danger-ghost-line)
+}
+.chat-more-confirm{margin:4px 2px 2px}
 
 /* ---- переключатель ---- */
 .switch{
@@ -1438,6 +1443,7 @@ html[data-wallpaper="party"] .wall-rect{fill:url(#wp-party)}
 
 /* --- секция в «Оформлении» --- */
 .wall-section{margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+.theme-effects{margin-top:18px}
 .wall-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
 .wall-title{margin:0 0 2px;font-size:15px;font-weight:500;letter-spacing:-.01em;color:var(--ink)}
 .wall-sub{margin:0;font-size:11.5px;color:var(--muted-2)}
