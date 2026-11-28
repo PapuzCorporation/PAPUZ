@@ -5648,9 +5648,10 @@ if (window.visualViewport) {
   schedule(200);
 })();
 
-/* ------------------------------------------------ блик на кромке (full)
-   В Firefox ободок стекла поворачивается вслед за прокруткой ленты:
-   меняем только CSS-переменную, без пересборки DOM и без фильтра на тексте. */
+/* ------------------------------------------------ блик на кромке (full/safari)
+   full — ободок стекла поворачивается вслед за прокруткой ленты;
+   safari — блик Two-Stage перекатывается по стеклу от 15% до 85%.
+   Меняем только CSS-переменную, без пересборки DOM и без фильтра на тексте. */
 (() => {
   const root = document.documentElement;
   const list = $('#messages');
@@ -5658,12 +5659,19 @@ if (window.visualViewport) {
   if (!list || !composer) return;
   let ticking = false;
   list.addEventListener('scroll', () => {
-    if (root.dataset.glass !== 'full' || ticking) return;
+    const mode = root.dataset.glass;
+    if ((mode !== 'full' && mode !== 'safari') || ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
       ticking = false;
-      const deg = (list.scrollTop * 0.22) % 360;
-      composer.style.setProperty('--rim-angle', `${deg.toFixed(1)}deg`);
+      if (mode === 'full') {
+        const deg = (list.scrollTop * 0.22) % 360;
+        composer.style.setProperty('--rim-angle', `${deg.toFixed(1)}deg`);
+      } else {
+        /* синус даёт плавный перекат без рывка на краях диапазона */
+        const t = (Math.sin(list.scrollTop / 240) + 1) / 2;
+        composer.style.setProperty('--glass-lx', `${(15 + t * 70).toFixed(1)}%`);
+      }
     });
   }, { passive: true });
 })();
