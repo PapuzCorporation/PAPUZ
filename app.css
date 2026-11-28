@@ -564,6 +564,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
   text-align:left;transition:background .18s;
 }
 .chat-more-row:hover{background:var(--panel-2)}
+.chat-more-row[hidden]{display:none}
 .chat-more-ico{
   width:33px;height:33px;flex:none;display:grid;place-items:center;border-radius:10px;
   color:var(--mint);background:var(--accent-soft);border:1px solid var(--accent-soft-line);

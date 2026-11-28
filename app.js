@@ -4826,13 +4826,24 @@ function openChatMore() {
   if (!chat) return;
   syncChatNotify();
   resetChatClear();
-  /* в личном чате чистим у обоих, в группе или канале — только у себя */
-  const both = chat.type === 'dm';
-  $('#chat-clear-sub').textContent = both ? 'Удалить историю у обоих' : 'Удалить историю только у себя';
-  $('#chat-clear-text').textContent = both
-    ? 'Очистить историю? Сообщения исчезнут у тебя и у собеседника.'
-    : 'Очистить историю? У других участников сообщения останутся.';
-  $('#chat-clear-yes').textContent = both ? 'Очистить у обоих' : 'Очистить';
+  /* в личном чате чистит любой из двоих; в группе и канале — владелец или админ */
+  const isDm = chat.type === 'dm';
+  const isChannel = chat.type === 'channel';
+  const canClear = isDm || chat.role === 'owner' || chat.role === 'admin';
+  $('#chat-clear-row').hidden = !canClear;
+  if (isDm) {
+    $('#chat-clear-sub').textContent = 'Удалить историю у обоих';
+    $('#chat-clear-text').textContent = 'Очистить историю? Сообщения исчезнут у тебя и у собеседника.';
+    $('#chat-clear-yes').textContent = 'Очистить у обоих';
+  } else if (isChannel) {
+    $('#chat-clear-sub').textContent = 'Удалить историю у всех подписчиков';
+    $('#chat-clear-text').textContent = 'Очистить историю канала? Сообщения исчезнут у всех подписчиков.';
+    $('#chat-clear-yes').textContent = 'Очистить у всех';
+  } else {
+    $('#chat-clear-sub').textContent = 'Удалить историю у всех участников';
+    $('#chat-clear-text').textContent = 'Очистить историю группы? Сообщения исчезнут у всех участников.';
+    $('#chat-clear-yes').textContent = 'Очистить у всех';
+  }
   chatMore.hidden = false;
   $('#btn-chat-more').setAttribute('aria-expanded', 'true');
 }
