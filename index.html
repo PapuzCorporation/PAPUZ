@@ -34,7 +34,7 @@
 <meta name="twitter:title" content="PAPUZ">
 <meta name="twitter:description" content="Тихий мессенджер для своих">
 <meta name="twitter:image" content="https://papuz.ru/og-image.png">
-<link rel="stylesheet" href="/app.css?v=164">
+<link rel="stylesheet" href="/app.css?v=165">
 <link rel="modulepreload" href="/crypto.js?v=134">
 <link rel="modulepreload" href="/media.js?v=134">
 <script type="application/ld+json">
@@ -261,13 +261,13 @@
                 </span>
                 <span class="chat-more-body">
                   <span class="chat-more-title">Очистить чат</span>
-                  <span class="chat-more-sub">Удалить историю только у себя</span>
+                  <span class="chat-more-sub" id="chat-clear-sub">Удалить историю только у себя</span>
                 </span>
               </button>
             </div>
 
             <div class="g-confirm chat-more-confirm" id="chat-clear-confirm" hidden>
-              <p>Очистить историю? У других участников сообщения останутся.</p>
+              <p id="chat-clear-text">Очистить историю? У других участников сообщения останутся.</p>
               <div class="g-confirm-actions">
                 <button class="btn danger-ghost" id="chat-clear-yes" type="button">Очистить</button>
                 <button class="btn ghost" id="chat-clear-no" type="button">Отмена</button>
@@ -899,6 +899,6 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/twemoji.min.js"></script>
-<script src="/app.js?v=164" type="module"></script>
+<script src="/app.js?v=165" type="module"></script>
 </body>
 </html>

@@ -1051,10 +1051,13 @@ async function loadChats() {
      более свежее локальное превью и счётчик непрочитанных назад */
   for (const c of state.chats) {
     const prev = known.get(c.id);
-    if (prev && (Number(prev.lastMessage?.id) || 0) > (Number(c.lastMessage?.id) || 0)) {
+    const prevLast = Number(prev?.lastMessage?.id) || 0;
+    const cleared = Number(prev?.clearedId) || 0;
+    if (prev && prevLast > (Number(c.lastMessage?.id) || 0) && prevLast > cleared) {
       c.lastMessage = prev.lastMessage;
       c.unread = prev.unread;
     }
+    if (prev?.clearedId) c.clearedId = prev.clearedId;
   }
   for (const p of previews) {
     if (!chats.some((c) => c.id === p.id)) state.chats.unshift(p);
@@ -4823,6 +4826,13 @@ function openChatMore() {
   if (!chat) return;
   syncChatNotify();
   resetChatClear();
+  /* в личном чате чистим у обоих, в группе или канале — только у себя */
+  const both = chat.type === 'dm';
+  $('#chat-clear-sub').textContent = both ? 'Удалить историю у обоих' : 'Удалить историю только у себя';
+  $('#chat-clear-text').textContent = both
+    ? 'Очистить историю? Сообщения исчезнут у тебя и у собеседника.'
+    : 'Очистить историю? У других участников сообщения останутся.';
+  $('#chat-clear-yes').textContent = both ? 'Очистить у обоих' : 'Очистить';
   chatMore.hidden = false;
   $('#btn-chat-more').setAttribute('aria-expanded', 'true');
 }
@@ -4909,10 +4919,12 @@ $('#chat-clear-yes').addEventListener('click', async () => {
   const btn = $('#chat-clear-yes');
   btn.disabled = true;
   try {
-    await api(`/api/chats/${chat.id}/clear`, { method: 'POST' });
+    const res = await api(`/api/chats/${chat.id}/clear`, { method: 'POST' });
     state.messages.set(chat.id, []);
+    state.preview.delete(chat.id);
     chat.lastMessage = null;
     chat.unread = 0;
+    chat.clearedId = Number(res?.cleared) || 0;
     closeChatMore();
     if (state.activeId === chat.id) await renderMessages(chat.id);
     scheduleRenderChats();
@@ -5179,6 +5191,25 @@ function connectWs() {
 
     if (msg.type === 'chats') {
       loadChats().catch(() => {});
+      return;
+    }
+
+    /* историю очистили (в личном чате — у обоих): убираем её и из открытой ленты */
+    if (msg.type === 'chat-cleared') {
+      const chatId = Number(msg.chatId);
+      if (!chatId) return;
+      const cleared = Number(msg.cleared) || 0;
+      const list = state.messages.get(chatId);
+      if (list) state.messages.set(chatId, list.filter((m) => m.id > cleared));
+      state.preview.delete(chatId);
+      const chat = state.chats.find((c) => c.id === chatId);
+      if (chat) {
+        chat.lastMessage = null;
+        chat.unread = 0;
+        chat.clearedId = cleared;
+      }
+      if (state.activeId === chatId) renderMessages(chatId).catch(() => {});
+      scheduleRenderChats();
       return;
     }
 
