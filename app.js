@@ -1400,6 +1400,8 @@ function applyComposerMode(chat) {
   if (preview) $('#msg-input').placeholder = 'Вы не подписаны на канал';
   else if (channelMember) $('#msg-input').placeholder = 'В канале пишут только админы';
   else $('#msg-input').placeholder = 'Сообщение…';
+  /* поле могло быть скрыто при прошлом чате — возвращаем ему строку */
+  fitInput();
 }
 
 /* «печатает…»: точки занимают своё место над композером, а не поверх сообщения */
@@ -2632,6 +2634,9 @@ async function renderMessages(chatId, { keepScroll = false, reveal = false } = {
     /* сначала показываем чат: на телефоне скрытый экран не раскладывается
        (content-visibility), и высоту композера иначе не измерить */
     $('.shell').classList.add('chat-open');
+    /* композер уже виден: чиним высоту поля, если она осталась
+       нулевой от скрытого состояния, и только потом меряем панель */
+    fitInput();
     /* высоту композера меряем до прокрутки: низ ленты не должен
        оказаться под кнопками */
     syncComposerHeight();
@@ -2965,6 +2970,23 @@ setInterval(() => { if (!document.hidden && state.me) flushAllReads(); }, 20000)
 const input = $('#msg-input');
 const sendBtn = $('#btn-send');
 
+/* Высота поля ввода: одна строка — 38px, дальше растёт до 132px.
+   Если композер скрыт (смена чата, канал без прав, превью канала),
+   Firefox отдаёт scrollHeight = 0 — раньше это зажимало поле в тонкую
+   прокручиваемую полоску. Поэтому сначала проверяем, что элемент
+   реально разложен, и никогда не опускаемся ниже одной строки. */
+function fitInput() {
+  if (!input.offsetParent || input.scrollHeight < 38) {
+    input.style.height = '38px';
+    input.style.overflowY = 'hidden';
+    return;
+  }
+  input.style.height = 'auto';
+  const h = input.scrollHeight;
+  input.style.height = Math.min(h, 132) + 'px';
+  input.style.overflowY = h > 120 ? 'auto' : 'hidden';
+}
+
 function syncSend() {
   const has = input.value.trim().length > 0;
   sendBtn.dataset.mode = has ? 'send' : 'mic';
@@ -3043,8 +3065,7 @@ syncSend();
 
 input.addEventListener('input', () => {
   syncSend();
-  input.style.height = 'auto';
-  input.style.height = Math.min(input.scrollHeight, 132) + 'px';
+  fitInput();
   const chatId = state.activeId;
   if (chatId && state.ws?.readyState === 1) {
     const chat = state.chats.find((c) => c.id === chatId);
@@ -3071,8 +3092,8 @@ $('#composer').addEventListener('submit', async (e) => {
   if (!text || !chatId) return;
 
   input.value = '';
-  input.style.height = 'auto';
   syncSend();
+  fitInput();
 
   try {
     const key = await getChatKey(chatId);

@@ -673,6 +673,7 @@ html[data-theme="sakura"] .snow i b{--snow-ink:#bcd8e6;--snow-glow:rgba(110,145,
    тонкая рамка дают тот же вид, но не трогают композитор прокрутки. */
 .composer,.typing,.ch-sub{position:relative;z-index:1}
 .composer{display:flex;align-items:flex-end;gap:7px;box-sizing:border-box;
+  flex:none;min-height:44px;
   width:100%;max-width:100%;margin:0;
   padding:8px max(12px, calc((100% - 880px) / 2)) max(8px, env(safe-area-inset-bottom))}
 /* iOS Safari: к базовым 8px прибавляем safe-area, а не заменяем её —
@@ -689,14 +690,19 @@ html[data-glass="safari"] .composer{
 .c-btn .ico{width:21px;height:21px;pointer-events:none}
 .c-btn:active{transform:scale(.93);background:var(--c-btn-bg-active)}
 .c-btn[aria-expanded="true"]{color:var(--send-fg);background:var(--send-grad-press),var(--glass-bg,var(--card-bg));border-color:var(--send-line-press)}
-.c-field{flex:1;min-width:0;display:flex;align-items:flex-end;padding:2px 4px 2px 15px;border-radius:22px;
+.c-field{flex:1;min-width:0;min-height:44px;box-sizing:border-box;
+  display:flex;align-items:flex-end;padding:2px 4px 2px 15px;border-radius:22px;
   background:var(--glass-bg,var(--card-bg));border:1px solid var(--glass-line,var(--line));
   box-shadow:var(--glass-shadow);
   transition:border-color .2s,background .2s}
 .c-field:focus-within{border-color:var(--input-focus-line);background:var(--glass-bg-focus,var(--input-bg-focus))}
-.c-field textarea{flex:1;min-width:0;resize:none!important;padding:9px 0;background:none;border:0;outline:none;
-  max-height:132px;line-height:1.42;font-size:15px;color:var(--ink);font-family:inherit;
-  overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;-webkit-appearance:none;appearance:none}
+/* Одна строка — ровно 38px (24px строка + 14px паддинга), поле — 44px.
+   overflow-y по умолчанию hidden: Firefox иначе превращает схлопнутое
+   поле в прокручиваемую полоску с плейсхолдером. JS включает auto
+   только когда текст реально вырос выше 120px. */
+.c-field textarea{flex:1;min-width:0;resize:none!important;padding:7px 0;background:none;border:0;outline:none;
+  height:38px;min-height:38px;max-height:132px;line-height:24px;font-size:15px;color:var(--ink);font-family:inherit;
+  overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;-webkit-appearance:none;appearance:none}
 .c-field textarea::-webkit-resizer{display:none;width:0;height:0;background:none}
 .c-field textarea::-webkit-scrollbar{width:0;height:0;display:none}
 .c-field textarea::placeholder{color:var(--glass-muted,var(--muted))}
